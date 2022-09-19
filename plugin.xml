@@ -2,7 +2,7 @@
    <name>Fields</name>
    <key>fields</key>
    <state>stable</state>
-   <logo>https://raw.githubusercontent.com/pluginsGLPI/fields/master/plugin.png</logo>
+   <logo>https://raw.githubusercontent.com/pluginsGLPI/fields/master/docs/logo.png</logo>
    <description>
       <short>
          <cs>Zásuvný modul kolonky umožňuje přidávat vlastní kolonky do glpi typů: požadavky, počítače, uživatelé…</cs>
@@ -97,6 +97,81 @@ Il existe un [script de migration](https://github.com/pluginsGLPI/customfields/b
       <author>Johan Cwiklinski</author>
    </authors>
    <versions>
+      <version>
+         <num>1.17.3</num>
+         <compatibility>~10.0.0</compatibility>
+         <download_url>https://github.com/pluginsGLPI/fields/releases/download/1.17.3/glpi-fields-1.17.3.tar.bz2</download_url>
+      </version>
+      <version>
+         <num>1.17.2</num>
+         <compatibility>~10.0.0</compatibility>
+         <download_url>https://github.com/pluginsGLPI/fields/releases/download/1.17.2/glpi-fields-1.17.2.tar.bz2</download_url>
+      </version>
+      <version>
+         <num>1.17.1</num>
+         <compatibility>~10.0.0</compatibility>
+         <download_url>https://github.com/pluginsGLPI/fields/releases/download/1.17.1/glpi-fields-1.17.1.tar.bz2</download_url>
+      </version>
+      <version>
+         <num>1.17.0</num>
+         <compatibility>~10.0.0</compatibility>
+         <download_url>https://github.com/pluginsGLPI/fields/releases/download/1.17.0/glpi-fields-1.17.0.tar.bz2</download_url>
+      </version>
+      <version>
+         <num>1.16.0</num>
+         <compatibility>~10.0.0</compatibility>
+         <download_url>https://github.com/pluginsGLPI/fields/releases/download/1.16.0/glpi-fields-1.16.0.tar.bz2</download_url>
+      </version>
+      <version>
+         <num>1.15.3</num>
+         <compatibility>~10.0.0</compatibility>
+         <download_url>https://github.com/pluginsGLPI/fields/releases/download/1.15.3/glpi-fields-1.15.3.tar.bz2</download_url>
+      </version>
+      <version>
+         <num>1.15.2</num>
+         <compatibility>~10.0.0</compatibility>
+         <download_url>https://github.com/pluginsGLPI/fields/releases/download/1.15.2/glpi-fields-1.15.2.tar.bz2</download_url>
+      </version>
+      <version>
+         <num>1.15.1</num>
+         <compatibility>~10.0.0</compatibility>
+         <download_url>https://github.com/pluginsGLPI/fields/releases/download/1.15.1/glpi-fields-1.15.1.tar.bz2</download_url>
+      </version>
+      <version>
+         <num>1.15.0</num>
+         <compatibility>~10.0.0</compatibility>
+         <download_url>https://github.com/pluginsGLPI/fields/releases/download/1.15.0/glpi-fields-1.15.0.tar.bz2</download_url>
+      </version>
+      <version>
+         <num>1.14.0</num>
+         <compatibility>~10.0.0</compatibility>
+         <download_url>https://github.com/pluginsGLPI/fields/releases/download/1.14.0/glpi-fields-1.14.0.tar.bz2</download_url>
+      </version>
+      <version>
+         <num>1.13.0</num>
+         <compatibility>~9.5.0</compatibility>
+         <download_url>https://github.com/pluginsGLPI/fields/releases/download/1.13.0/glpi-fields-1.13.0.tar.bz2</download_url>
+      </version>
+      <version>
+         <num>1.12.12</num>
+         <compatibility>~9.5.0</compatibility>
+         <download_url>https://github.com/pluginsGLPI/fields/releases/download/1.12.12/glpi-fields-1.12.12.tar.bz2</download_url>
+      </version>
+      <version>
+         <num>1.12.11</num>
+         <compatibility>~9.5.0</compatibility>
+         <download_url>https://github.com/pluginsGLPI/fields/releases/download/1.12.11/glpi-fields-1.12.11.tar.bz2</download_url>
+      </version>
+      <version>
+         <num>1.12.10</num>
+         <compatibility>~9.5.0</compatibility>
+         <download_url>https://github.com/pluginsGLPI/fields/releases/download/1.12.10/glpi-fields-1.12.10.tar.bz2</download_url>
+      </version>
+      <version>
+         <num>1.12.9</num>
+         <compatibility>~9.5.0</compatibility>
+         <download_url>https://github.com/pluginsGLPI/fields/releases/download/1.12.9/glpi-fields-1.12.9.tar.bz2</download_url>
+      </version>
       <version>
          <num>1.12.8</num>
          <compatibility>~9.5.0</compatibility>
@@ -309,6 +384,6 @@ Il existe un [script de migration](https://github.com/pluginsGLPI/customfields/b
       </fr>
    </tags>
    <screenshots>
-      <screenshot>https://raw.githubusercontent.com/pluginsGLPI/fields/master/fields.gif</screenshot>
+      <screenshot>https://raw.githubusercontent.com/pluginsGLPI/fields/master/docs/screenshots/fields.gif</screenshot>
    </screenshots>
 </root>
