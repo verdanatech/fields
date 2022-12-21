@@ -36,14 +36,14 @@ class PluginFieldsLabelTranslation extends CommonDBChild
     public static $items_id = 'items_id';
 
     /**
-     * Install or update fields
+     * Install or update plugin base data.
      *
      * @param Migration $migration Migration instance
      * @param string    $version   Plugin current version
      *
-     *  @return boolean
+     * @return boolean
      */
-    public static function install(Migration $migration, $version)
+    public static function installBaseData(Migration $migration, $version)
     {
         global $DB;
 
@@ -333,6 +333,6 @@ class PluginFieldsLabelTranslation extends CommonDBChild
             return array_values($found)[0]['label'];
         }
 
-        return $item['label'];
+        return $item['label'] ?? '';
     }
 }

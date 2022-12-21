@@ -54,14 +54,14 @@ class PluginFieldsContainer extends CommonDBTM
     }
 
     /**
-     * Install or update containers
+     * Install or update plugin base data.
      *
      * @param Migration $migration Migration instance
      * @param string    $version   Plugin current version
      *
      * @return boolean
      */
-    public static function install(Migration $migration, $version)
+    public static function installBaseData(Migration $migration, $version)
     {
         global $DB;
 
@@ -112,6 +112,52 @@ class PluginFieldsContainer extends CommonDBTM
         if (!$DB->fieldExists($table, "subtype")) {
             $migration->addField($table, 'subtype', 'VARCHAR(255) DEFAULT NULL', ['after' => 'type']);
             $migration->migrationOneTable($table);
+        }
+
+        return true;
+    }
+
+    /**
+     * Install or update user data.
+     *
+     * @param Migration $migration Migration instance
+     * @param string    $version   Plugin current version
+     *
+     * @return boolean
+     */
+    public static function installUserData(Migration $migration, $version)
+    {
+        global $DB;
+
+        // -> 0.90-1.3: generated class moved
+        // Drop them, they will be regenerated
+        $obj        = new self();
+        $containers = $obj->find();
+        foreach ($containers as $container) {
+            $itemtypes = !empty($container['itemtypes'])
+                ? json_decode($container['itemtypes'], true)
+                : [];
+
+            foreach ($itemtypes as $itemtype) {
+                $sysname = self::getSystemName($itemtype, $container['name']);
+                $class_filename = $sysname . ".class.php";
+                if (file_exists(PLUGINFIELDS_DIR . "/inc/$class_filename")) {
+                    unlink(PLUGINFIELDS_DIR . "/inc/$class_filename");
+                }
+
+                $injclass_filename = $sysname . "injection.class.php";
+                if (file_exists(PLUGINFIELDS_DIR . "/inc/$injclass_filename")) {
+                    unlink(PLUGINFIELDS_DIR . "/inc/$injclass_filename");
+                }
+            }
+        }
+
+        // Regenerate container classes to ensure they can be used
+        $migration->displayMessage(__("Regenerate containers files", "fields"));
+        $obj        = new self();
+        $containers = $obj->find();
+        foreach ($containers as $container) {
+            self::generateTemplate($container);
         }
 
         // Fix containers names that were generated prior to Fields 1.9.2.
@@ -216,34 +262,13 @@ class PluginFieldsContainer extends CommonDBTM
             }
         }
 
+        // Ensure data is update before regenerating files.
+        $migration->executeMigration();
+
+        // Regenerate files and install missing tables
         $migration->displayMessage(__("Updating generated containers files", "fields"));
         $obj        = new self();
         $containers = $obj->find();
-
-        // -> 0.90-1.3: generated class moved
-        // OLD path: GLPI_ROOT."/plugins/fields/inc/$class_filename"
-        // NEW path: PLUGINFIELDS_CLASS_PATH . "/$class_filename"
-        foreach ($containers as $container) {
-            //First, drop old fields from plugin directories
-            $itemtypes = !empty($container['itemtypes'])
-                ? json_decode($container['itemtypes'], true)
-                : [];
-
-            foreach ($itemtypes as $itemtype) {
-                $sysname = self::getSystemName($itemtype, $container['name']);
-                $class_filename = $sysname . ".class.php";
-                if (file_exists(PLUGINFIELDS_DIR . "/inc/$class_filename")) {
-                    unlink(PLUGINFIELDS_DIR . "/inc/$class_filename");
-                }
-
-                $injclass_filename = $sysname . "injection.class.php";
-                if (file_exists(PLUGINFIELDS_DIR . "/inc/$injclass_filename")) {
-                    unlink(PLUGINFIELDS_DIR . "/inc/$injclass_filename");
-                }
-            }
-        }
-
-        // Regenerate files and install missing tables
         foreach ($containers as $container) {
             self::create($container);
         }
@@ -1056,6 +1081,14 @@ HTML;
             return false;
         }
 
+        // Normalize values
+        foreach ($data as $key => $value) {
+            if (is_array($value)) {
+                // Convert "multiple" values into a JSON string
+                $data[$key] = json_encode($value);
+            }
+        }
+
         $container_obj = new PluginFieldsContainer();
         $container_obj->getFromDB($data['plugin_fields_containers_id']);
 
@@ -1146,17 +1179,29 @@ HTML;
                         if ($searchoption['linkfield'] == $key) {
                              $changes[0] = $id_search_option;
 
-                            //manage dropdown values
                             if ($searchoption['datatype'] === 'dropdown') {
+                                //manage dropdown values
                                 $changes = [$id_search_option,
                                     "",
                                     Dropdown::getDropdownName($searchoption['table'], $value)
                                 ];
-                            }
-
-                            //manage bool dropdown values
-                            if ($searchoption['datatype'] === 'bool') {
+                            } elseif ($searchoption['datatype'] === 'bool') {
+                                //manage bool values
                                 $changes = [$id_search_option, "", Dropdown::getYesNo($value)];
+                            } elseif ($searchoption['datatype'] === 'specific') {
+                                //manage specific values
+                                $changes = [
+                                    $id_search_option,
+                                    "",
+                                    PluginFieldsAbstractContainerInstance::getSpecificValueToDisplay(
+                                        $key,
+                                        $value,
+                                        [
+                                            'searchopt' => $searchoption,
+                                            'separator' => ', ',
+                                        ]
+                                    )
+                                ];
                             }
                         }
                     }
@@ -1190,14 +1235,32 @@ HTML;
                     if ($searchoption['linkfield'] == $key) {
                         $changes[0] = $id_search_option;
 
-                        //manage dropdown values
                         if ($searchoption['datatype'] === 'dropdown') {
+                            //manage dropdown values
                             $changes[1] = Dropdown::getDropdownName($searchoption['table'], $changes[1]);
                             $changes[2] = Dropdown::getDropdownName($searchoption['table'], $changes[2]);
-                        }
-                        if ($searchoption['datatype'] === 'bool') {
+                        } elseif ($searchoption['datatype'] === 'bool') {
+                            //manage bool values
                             $changes[1] = Dropdown::getYesNo($changes[1]);
                             $changes[2] = Dropdown::getYesNo($changes[2]);
+                        } elseif ($searchoption['datatype'] === 'specific') {
+                            //manage specific values
+                            $changes[1] = PluginFieldsAbstractContainerInstance::getSpecificValueToDisplay(
+                                $key,
+                                $changes[1],
+                                [
+                                    'searchopt' => $searchoption,
+                                    'separator' => ', ',
+                                ]
+                            );
+                            $changes[2] = PluginFieldsAbstractContainerInstance::getSpecificValueToDisplay(
+                                $key,
+                                $changes[2],
+                                [
+                                    'searchopt' => $searchoption,
+                                    'separator' => ', ',
+                                ]
+                            );
                         }
                     }
                 }
@@ -1236,7 +1299,7 @@ HTML;
 
         // Apply status overrides
         $status_field_name = PluginFieldsStatusOverride::getStatusFieldName($itemtype);
-        $status_overrides = $data[$status_field_name] !== null
+        $status_overrides = array_key_exists($status_field_name, $data) && $data[$status_field_name] !== null
             ? PluginFieldsStatusOverride::getOverridesForItemtypeAndStatus($container->getID(), $itemtype, $data[$status_field_name])
             : [];
         foreach ($status_overrides as $status_override) {
@@ -1285,7 +1348,9 @@ HTML;
                 $db_result = [];
                 if ($result = $DB->query($query)) {
                     $db_result = $DB->fetchAssoc($result);
-                    if (isset($db_result[$name])) {
+                    if (isset($db_result['plugin_fields_' . $name . 'dropdowns_id'])) {
+                        $value = $db_result['plugin_fields_' . $name . 'dropdowns_id'];
+                    } else if (isset($db_result[$name])) {
                         $value = $db_result[$name];
                     }
                 }
@@ -1585,8 +1650,7 @@ HTML;
 
         $opt = [];
 
-        $i = 76665;
-
+        // itemtype is stored in a JSON array, so entry is surrounded by double quotes
         $search_string = json_encode($itemtype);
         // Backslashes must be doubled in LIKE clause, according to MySQL documentation:
         // > To search for \, specify it as \\\\; this is because the backslashes are stripped
@@ -1594,29 +1658,62 @@ HTML;
         // > leaving a single backslash to be matched against.
         $search_string = str_replace('\\', '\\\\', $search_string);
 
-        $query = "SELECT DISTINCT fields.id, fields.name, fields.label, fields.type, fields.is_readonly, fields.allowed_values,
-            containers.name as container_name, containers.label as container_label,
-            containers.itemtypes, containers.id as container_id, fields.id as field_id
-         FROM glpi_plugin_fields_containers containers
-         INNER JOIN glpi_plugin_fields_profiles profiles
-            ON containers.id = profiles.plugin_fields_containers_id
-            AND profiles.right > 0
-            AND profiles.profiles_id = " . (int) $_SESSION['glpiactiveprofile']['id'] . "
-         INNER JOIN glpi_plugin_fields_fields fields
-            ON containers.id = fields.plugin_fields_containers_id
-            AND containers.is_active = 1
-         WHERE containers.itemtypes LIKE '%" . $DB->escape($search_string) . "%'
-            AND fields.type != 'header'
-            ORDER BY fields.id ASC";
-        $res = $DB->query($query);
-        while ($data = $DB->fetchAssoc($res)) {
-            if ($containers_id !== false) {
-                // Filter by container (don't filter by SQL for have $i value with few containers for a itemtype)
-                if ($data['container_id'] != $containers_id) {
-                    $i++;
-                    continue;
-                }
-            }
+        $request = [
+            'SELECT' => [
+                'glpi_plugin_fields_fields.id AS field_id',
+                'glpi_plugin_fields_fields.name AS field_name',
+                'glpi_plugin_fields_fields.label AS field_label',
+                'glpi_plugin_fields_fields.type',
+                'glpi_plugin_fields_fields.is_readonly',
+                'glpi_plugin_fields_fields.allowed_values',
+                'glpi_plugin_fields_fields.multiple',
+                'glpi_plugin_fields_containers.id AS container_id',
+                'glpi_plugin_fields_containers.name AS container_name',
+                'glpi_plugin_fields_containers.label AS container_label',
+                (
+                    Session::isCron()
+                        ? new QueryExpression(sprintf('%s AS %s', READ + CREATE, $DB->quoteName('right')))
+                        : 'glpi_plugin_fields_profiles.right'
+                )
+            ],
+            'DISTINCT' => true,
+            'FROM' => 'glpi_plugin_fields_fields',
+            'INNER JOIN' => [
+                'glpi_plugin_fields_containers' => [
+                    'FKEY' => [
+                        'glpi_plugin_fields_containers' => 'id',
+                        'glpi_plugin_fields_fields'     => 'plugin_fields_containers_id',
+                    ]
+                ],
+                'glpi_plugin_fields_profiles' => [
+                    'FKEY' => [
+                        'glpi_plugin_fields_containers' => 'id',
+                        'glpi_plugin_fields_profiles'   => 'plugin_fields_containers_id',
+                    ]
+                ],
+            ],
+            'WHERE' => [
+                'glpi_plugin_fields_containers.is_active'   => 1,
+                'glpi_plugin_fields_containers.itemtypes'   => ['LIKE', '%' . $DB->escape($search_string) . '%'],
+                'glpi_plugin_fields_profiles.right'         => ['>', 0],
+                'glpi_plugin_fields_fields.is_active'       => 1,
+                ['NOT' => ['glpi_plugin_fields_fields.type' => 'header']],
+            ],
+            'ORDERBY'      => [
+                'glpi_plugin_fields_fields.id',
+            ],
+        ];
+        if ($containers_id !== false) {
+            $request['WHERE'][] = ['glpi_plugin_fields_containers.id' => $containers_id];
+        }
+        if (!Session::isCron()) {
+            $request['WHERE'][] = ['glpi_plugin_fields_profiles.profiles_id' => (int)$_SESSION['glpiactiveprofile']['id']];
+        }
+
+        $iterator = $DB->request($request);
+        foreach ($iterator as $data) {
+            $i = PluginFieldsField::SEARCH_OPTION_STARTING_INDEX + $data['field_id'];
+
             $tablename = getTableForItemType(self::getClassname($itemtype, $data['container_name']));
 
             //get translations
@@ -1630,17 +1727,20 @@ HTML;
             $field = [
                 'itemtype' => PluginFieldsField::getType(),
                 'id'       => $data['field_id'],
-                'label'    => $data['label']
+                'label'    => $data['field_label']
             ];
-            $data['label'] = PluginFieldsLabelTranslation::getLabelFor($field);
+            $data['field_label'] = PluginFieldsLabelTranslation::getLabelFor($field);
 
             // Default SO params
             $opt[$i]['table']         = $tablename;
-            $opt[$i]['field']         = $data['name'];
-            $opt[$i]['name']          = $data['container_label'] . " - " . $data['label'];
-            $opt[$i]['linkfield']     = $data['name'];
+            $opt[$i]['field']         = $data['field_name'];
+            $opt[$i]['name']          = $data['container_label'] . " - " . $data['field_label'];
+            $opt[$i]['linkfield']     = $data['field_name'];
             $opt[$i]['joinparams']['jointype'] = "itemtype_item";
-            $opt[$i]['pfields_type']  = $data['type'];
+
+            $opt[$i]['pfields_type']      = $data['type'];
+            $opt[$i]['pfields_fields_id'] = $data['field_id'];
+
             if ($data['is_readonly']) {
                 $opt[$i]['massiveaction'] = false;
             }
@@ -1665,39 +1765,50 @@ HTML;
 
             $dropdown_matches     = [];
             if ($data['type'] === "dropdown") {
-                $opt[$i]['table']      = 'glpi_plugin_fields_' . $data['name'] . 'dropdowns';
-                $opt[$i]['field']      = 'completename';
-                $opt[$i]['linkfield']  = "plugin_fields_" . $data['name'] . "dropdowns_id";
-                $opt[$i]['datatype']   = "dropdown";
+                $field_name = "plugin_fields_" . $data['field_name'] . "dropdowns_id";
 
-                $opt[$i]['forcegroupby'] = true;
+                if ($data['multiple']) {
+                    $opt[$i]['table']      = $tablename;
+                    $opt[$i]['field']      = $field_name;
+                    $opt[$i]['datatype']   = 'specific';
+                } else {
+                    $opt[$i]['table']      = 'glpi_plugin_fields_' . $data['field_name'] . 'dropdowns';
+                    $opt[$i]['field']      = 'completename';
+                    $opt[$i]['linkfield']  = $field_name;
+                    $opt[$i]['datatype']   = "dropdown";
 
-                $opt[$i]['joinparams']['jointype'] = "";
-                $opt[$i]['joinparams']['beforejoin']['table'] = $tablename;
-                $opt[$i]['joinparams']['beforejoin']['joinparams']['jointype'] = "itemtype_item";
+                    $opt[$i]['forcegroupby'] = true;
+
+                    $opt[$i]['joinparams']['jointype'] = "";
+                    $opt[$i]['joinparams']['beforejoin']['table'] = $tablename;
+                    $opt[$i]['joinparams']['beforejoin']['joinparams']['jointype'] = "itemtype_item";
+                }
             } elseif (
                 preg_match('/^dropdown-(?<class>.+)$/i', $data['type'], $dropdown_matches)
                 && class_exists($dropdown_matches['class'])
             ) {
-                $opt[$i]['table']      = CommonDBTM::getTable($dropdown_matches['class']);
-                $opt[$i]['field']      = 'name';
-                $opt[$i]['linkfield']  = $data['name'];
-                $opt[$i]['right']      = 'all';
-                $opt[$i]['datatype']   = "dropdown";
+                if ($data['multiple']) {
+                    $opt[$i]['datatype']   = 'specific';
+                } else {
+                    $opt[$i]['table']      = CommonDBTM::getTable($dropdown_matches['class']);
+                    $opt[$i]['field']      = 'name';
+                    $opt[$i]['right']      = 'all';
+                    $opt[$i]['datatype']   = "dropdown";
 
-                $opt[$i]['forcegroupby'] = true;
+                    $opt[$i]['forcegroupby'] = true;
 
-                $opt[$i]['joinparams']['jointype'] = "";
-                $opt[$i]['joinparams']['beforejoin']['table'] = $tablename;
-                $opt[$i]['joinparams']['beforejoin']['joinparams']['jointype'] = "itemtype_item";
+                    $opt[$i]['joinparams']['jointype'] = "";
+                    $opt[$i]['joinparams']['beforejoin']['table'] = $tablename;
+                    $opt[$i]['joinparams']['beforejoin']['joinparams']['jointype'] = "itemtype_item";
+                }
             } elseif ($data['type'] === "glpi_item") {
-                $itemtype_field = sprintf('itemtype_%s', $data['name']);
-                $items_id_field = sprintf('items_id_%s', $data['name']);
+                $itemtype_field = sprintf('itemtype_%s', $data['field_name']);
+                $items_id_field = sprintf('items_id_%s', $data['field_name']);
 
                 $opt[$i]['table']              = $tablename;
                 $opt[$i]['field']              = $itemtype_field;
                 $opt[$i]['linkfield']          = $itemtype_field;
-                $opt[$i]['name']               = $data['container_label'] . " - " . $data['label'] . ' - ' . _n('Associated item type', 'Associated item types', Session::getPluralNumber());
+                $opt[$i]['name']               = $data['container_label'] . " - " . $data['field_label'] . ' - ' . _n('Associated item type', 'Associated item types', Session::getPluralNumber());
                 $opt[$i]['datatype']           = 'itemtypename';
                 $opt[$i]['types']              = !empty($data['allowed_values']) ? json_decode($data['allowed_values']) : [];
                 $opt[$i]['additionalfields']   = ['itemtype'];
@@ -1709,14 +1820,12 @@ HTML;
                 $opt[$i]['table']              = $tablename;
                 $opt[$i]['field']              = $items_id_field;
                 $opt[$i]['linkfield']          = $items_id_field;
-                $opt[$i]['name']               = $data['container_label'] . " - " . $data['label'] . ' - ' . __('Associated item ID');
+                $opt[$i]['name']               = $data['container_label'] . " - " . $data['field_label'] . ' - ' . __('Associated item ID');
                 $opt[$i]['massiveaction']      = false;
                 $opt[$i]['joinparams']['jointype'] = 'itemtype_item';
                 $opt[$i]['datatype']           = 'text';
                 $opt[$i]['additionalfields']   = ['itemtype'];
             }
-
-            $i++;
         }
 
         return $opt;
