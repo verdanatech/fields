@@ -22,7 +22,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Fields. If not, see <http://www.gnu.org/licenses/>.
  * -------------------------------------------------------------------------
- * @copyright Copyright (C) 2013-2022 by Fields plugin team.
+ * @copyright Copyright (C) 2013-2023 by Fields plugin team.
  * @license   GPLv2 https://www.gnu.org/licenses/gpl-2.0.html
  * @link      https://github.com/pluginsGLPI/fields
  * -------------------------------------------------------------------------
@@ -51,6 +51,13 @@ class PluginFieldsContainer extends CommonDBTM
         echo "<div class='center'><a class='vsubmit' href='regenerate_files.php'><i class='pointer fa fa-refresh'></i>&nbsp;" .
             __("Regenerate container files", "fields") . "</a>&nbsp;&nbsp;<a class='vsubmit' href='export_to_yaml.php'><i class='pointer fa fa-refresh'></i>&nbsp;" .
             __("Export to YAML", "fields") . "</a></div><br>";
+    }
+
+    public function getForbiddenStandardMassiveAction()
+    {
+        $forbidden   = parent::getForbiddenStandardMassiveAction();
+        $forbidden[] = 'clone';
+        return $forbidden;
     }
 
     /**

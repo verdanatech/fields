@@ -22,7 +22,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Fields. If not, see <http://www.gnu.org/licenses/>.
  * -------------------------------------------------------------------------
- * @copyright Copyright (C) 2013-2022 by Fields plugin team.
+ * @copyright Copyright (C) 2013-2023 by Fields plugin team.
  * @license   GPLv2 https://www.gnu.org/licenses/gpl-2.0.html
  * @link      https://github.com/pluginsGLPI/fields
  * -------------------------------------------------------------------------
@@ -43,6 +43,15 @@ class PluginFieldsField extends CommonDBChild
 
     public static $itemtype = PluginFieldsContainer::class;
     public static $items_id = 'plugin_fields_containers_id';
+
+
+    public function getForbiddenStandardMassiveAction()
+    {
+        $forbidden   = parent::getForbiddenStandardMassiveAction();
+        $forbidden[] = 'clone';
+        return $forbidden;
+    }
+
 
     /**
      * Install or update plugin base data.

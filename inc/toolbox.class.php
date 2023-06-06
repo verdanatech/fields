@@ -22,13 +22,11 @@
  * You should have received a copy of the GNU General Public License
  * along with Fields. If not, see <http://www.gnu.org/licenses/>.
  * -------------------------------------------------------------------------
- * @copyright Copyright (C) 2013-2022 by Fields plugin team.
+ * @copyright Copyright (C) 2013-2023 by Fields plugin team.
  * @license   GPLv2 https://www.gnu.org/licenses/gpl-2.0.html
  * @link      https://github.com/pluginsGLPI/fields
  * -------------------------------------------------------------------------
  */
-
-use Glpi\Toolbox\Sanitizer;
 
 class PluginFieldsToolbox
 {
@@ -141,20 +139,20 @@ class PluginFieldsToolbox
                // limit tables names to 64 chars (MySQL limit)
                 $new_name = substr($new_name, 0, -1);
             }
-            $field['name'] = $new_name;
-            $field_obj->update(
-                Sanitizer::dbEscapeRecursive($field),
-                false
+            $DB->update(
+                PluginFieldsField::getTable(),
+                ['name' => $new_name],
+                ['id'   => $field['id']]
             );
 
             $sql_fields_to_rename = [
-                $old_name => $field['name'],
+                $old_name => $new_name,
             ];
 
             if ('dropdown' === $field['type']) {
                // Rename dropdown table
                 $old_table = getTableForItemType(PluginFieldsDropdown::getClassname($old_name));
-                $new_table = getTableForItemType(PluginFieldsDropdown::getClassname($field['name']));
+                $new_table = getTableForItemType(PluginFieldsDropdown::getClassname($new_name));
 
                 if ($DB->tableExists($old_table)) {
                     $migration->renameTable($old_table, $new_table);
@@ -284,7 +282,7 @@ class PluginFieldsToolbox
         sort($component_items_itemtypes, SORT_NATURAL);
 
         $plugins_itemtypes = [];
-        foreach ($PLUGIN_HOOKS['plugin_fields'] as $itemtype) {
+        foreach (($PLUGIN_HOOKS['plugin_fields'] ?? []) as $itemtype) {
             $itemtype_specs = isPluginItemType($itemtype);
             if ($itemtype_specs) {
                 $plugins_itemtypes[] = $itemtype;
