@@ -367,11 +367,16 @@ class PluginFieldsField extends CommonDBChild
         $old_container = $this->fields['plugin_fields_containers_id'];
         $old_ranking   = $this->fields['ranking'];
 
-        $query = "UPDATE $table SET
-                ranking = ranking-1
-                WHERE plugin_fields_containers_id = $old_container
-                AND ranking > $old_ranking";
-        $DB->query($query);
+        $D->update(
+            $table,
+            [
+                'ranking' => new QueryExpression($DB->quoteName('ranking') . ' - 1')
+            ],
+            [
+                'plugin_fields_containers_id' => $old_container,
+                'ranking'                     => ['>', $old_ranking]
+            ]
+        );
 
         return true;
     }
@@ -441,14 +446,18 @@ class PluginFieldsField extends CommonDBChild
     {
         global $DB;
 
-        $sql = "SELECT max(`ranking`) AS `rank`
-              FROM `" . self::getTable() . "`
-              WHERE `plugin_fields_containers_id` = '" .
-                  $this->fields['plugin_fields_containers_id'] . "'";
-        $result = $DB->query($sql);
+        $iterator = $DB->request([
+            'SELECT' => new \QueryExpression(
+                'max(' . $DB->quoteName('ranking') . ') AS ' . $DB->quoteName('rank')
+            ),
+            'FROM'   => self::getTable(),
+            'WHERE'  => [
+                'plugin_fields_containers_id' => $this->fields['plugin_fields_containers_id']
+            ]
+        ]);
 
-        if ($DB->numrows($result) > 0) {
-            $data = $DB->fetchAssoc($result);
+        if (count($iterator) > 0) {
+            $data = $iterator->next();
             return $data["rank"] + 1;
         }
         return 0;
@@ -496,14 +505,14 @@ class PluginFieldsField extends CommonDBChild
         $cID = $container->fields['id'];
 
         // Display existing Fields
-        $query  = "SELECT `id`, `label`
-                FROM `" . $this->getTable() . "`
-                WHERE `plugin_fields_containers_id` = '$cID'
-                ORDER BY `ranking` ASC";
-        $result = $DB->query($query);
+        $iterator = $DB->request([
+            'SELECT' => ['id', 'label'],
+            'FROM' => self::getTable(),
+            'WHERE' => ['plugin_fields_containers_id' => $cID],
+            'ORDER' => 'ranking ASC'
+        ]);
 
         $rand   = mt_rand();
-
         echo "<div id='viewField$cID$rand'></div>";
 
         $ajax_params = [
@@ -525,7 +534,7 @@ class PluginFieldsField extends CommonDBChild
            "<a href='javascript:viewAddField$cID$rand();'>";
         echo __("Add a new field", "fields") . "</a></div><br>";
 
-        if ($DB->numrows($result) == 0) {
+        if (count($iterator) == 0) {
             echo "<table class='tab_cadre_fixe'><tr class='tab_bg_2'>";
             echo "<th class='b'>" . __("No field for this block", "fields") . "</th></tr></table>";
         } else {
@@ -548,7 +557,7 @@ class PluginFieldsField extends CommonDBChild
 
             Session::initNavigateListItems('PluginFieldsField', __('Fields list'));
 
-            while ($data = $DB->fetchArray($result)) {
+            foreach ($iterator as $data) {
                 if ($this->getFromDB($data['id'])) {
                     echo "<tr class='tab_bg_2' style='cursor:pointer'>";
 
@@ -1084,6 +1093,17 @@ JAVASCRIPT
                         // find from $item->input due to ajax refresh container
                         $value = $item->input[$field_name];
                     }
+                } elseif ($field['type'] === 'glpi_item') {
+                    if (isset($_SESSION['plugin']['fields']['values_sent']["itemtype_" . $field['name']])) {
+                        $value['itemtype'] = $_SESSION['plugin']['fields']['values_sent']["itemtype_" . $field['name']];
+                    } elseif (isset($item->input["itemtype_" . $field['name']])) {
+                        $value['itemtype'] = $item->input["itemtype_" . $field['name']] ?? '';
+                    }
+                    if (isset($_SESSION['plugin']['fields']['values_sent']["items_id_" . $field['name']])) {
+                        $value['items_id'] = $_SESSION['plugin']['fields']['values_sent']["items_id_" . $field['name']];
+                    } elseif (isset($item->input["items_id_" . $field['name']])) {
+                        $value['items_id'] = $item->input["items_id_" . $field['name']] ?? '';
+                    }
                 } else {
                     if (isset($_SESSION['plugin']['fields']['values_sent'][$field['name']])) {
                         $value = $_SESSION['plugin']['fields']['values_sent'][$field['name']];
@@ -1096,7 +1116,7 @@ JAVASCRIPT
 
             //get default value
             if ($value === null) {
-                if ($field['type'] === 'dropdown' && $field['default_value'] === '') {
+                if (in_array($field['type'], ['dropdown', 'yesno']) && $field['default_value'] === '') {
                     $value = 0;
                 } else if ($field['default_value'] !== "") {
                     $value = $field['default_value'];
@@ -1143,20 +1163,39 @@ JAVASCRIPT
         );
 
         //find field
-        $query = "SELECT fields.plugin_fields_containers_id, fields.is_readonly, fields.multiple, fields.default_value
-                FROM glpi_plugin_fields_fields fields
-                LEFT JOIN glpi_plugin_fields_containers containers
-                  ON containers.id = fields.plugin_fields_containers_id
-                  AND containers.itemtypes LIKE '%$itemtype%'
-               WHERE fields.name = '$cleaned_linkfield'";
-        $res = $DB->query($query);
-        if ($DB->numrows($res) == 0) {
+        $iterator = $DB->request([
+            'SELECT' => [
+                'fields.plugin_fields_containers_id',
+                'fields.is_readonly',
+                'fields.multiple',
+                'fields.default_value'
+            ],
+            'FROM' => self::getTable() . ' AS fields',
+            'LEFT JOIN' => [
+                'glpi_plugin_fields_containers AS containers' => [
+                    'FKEY' => [
+                        'containers' => 'id',
+                        'fields' => 'plugin_fields_containers_id',
+                        [
+                            'AND' => [
+                                'containers.itemtypes' => ['LIKE' => "%$itemtype%"]
+                            ]
+                        ]
+                    ]
+                ]
+            ],
+            'WHERE' => [
+                'fields.name' => $cleaned_linkfield
+            ],
+        ]);
+
+        if (count($iterator) == 0) {
             return false;
         }
 
-        $data = $DB->fetchAssoc($res);
+        $data = $iterator->next();
 
-        //display an hidden post field to store container id
+        //display a hidden post field to store container id
         echo Html::hidden('c_id', ['value' => $data['plugin_fields_containers_id']]);
 
         //prepare array for function prepareHtmlFields
