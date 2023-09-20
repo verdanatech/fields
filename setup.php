@@ -28,7 +28,7 @@
  * -------------------------------------------------------------------------
  */
 
-define('PLUGIN_FIELDS_VERSION', '1.20.7');
+define('PLUGIN_FIELDS_VERSION', '1.21.4');
 
 // Minimal GLPI version, inclusive
 define("PLUGIN_FIELDS_MIN_GLPI", "10.0.0");
@@ -121,10 +121,13 @@ function plugin_init_fields()
             $PLUGIN_HOOKS["menu_toadd"]['fields'] = ['config' => 'PluginFieldsMenu'];
 
             // add tabs to itemtypes
-            Plugin::registerClass(
-                'PluginFieldsContainer',
-                ['addtabon' => array_unique(PluginFieldsContainer::getEntries())]
-            );
+            $itemtypes = array_unique(PluginFieldsContainer::getEntries());
+            if (count($itemtypes) > 0) {
+                Plugin::registerClass(
+                    'PluginFieldsContainer',
+                    ['addtabon' => $itemtypes]
+                );
+            }
 
             //include js and css
             $debug = (isset($_SESSION['glpi_use_mode'])

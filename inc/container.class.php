@@ -997,7 +997,7 @@ HTML;
         ];
     }
 
-    public static function getEntries($type = 'tab', $full = false)
+    public static function getEntries($type = 'tab', $full = false): array
     {
         global $DB;
 
@@ -1009,7 +1009,7 @@ HTML;
         }
 
         if (!$DB->tableExists(self::getTable())) {
-            return false;
+            return [];
         }
 
         $itemtypes = [];
@@ -1031,9 +1031,14 @@ HTML;
             if (Session::isCron() || !isset($_SESSION['glpiactiveprofile']['id'])) {
                 continue;
             }
+
             //profiles restriction
-            $right = PluginFieldsProfile::getRightOnContainer($_SESSION['glpiactiveprofile']['id'], $item['id']);
-            if ($right < READ) {
+            if (isset($_SESSION['glpiactiveprofile']['id']) && $_SESSION['glpiactiveprofile']['id'] != null && $item['id'] > 0) {
+                $right = PluginFieldsProfile::getRightOnContainer($_SESSION['glpiactiveprofile']['id'], $item['id']);
+                if ($right < READ) {
+                    continue;
+                }
+            } else {
                 continue;
             }
 
@@ -1141,15 +1146,28 @@ HTML;
      */
     public function updateFieldsValues($data, $itemtype, $massiveaction = false)
     {
+        global $DB;
+
         if (self::validateValues($data, $itemtype, $massiveaction) === false) {
             return false;
         }
 
-        // Normalize values
-        foreach ($data as $key => $value) {
-            if (is_array($value)) {
-                // Convert "multiple" values into a JSON string
-                $data[$key] = json_encode($value);
+        // Convert "multiple" values into a JSON string
+        $multiple_fields_iterator = $DB->request([
+            'FROM'  => PluginFieldsField::getTable(),
+            'WHERE' => [
+                'is_active'                   => 1,
+                'multiple'                    => 1,
+                'plugin_fields_containers_id' => $data['plugin_fields_containers_id'],
+            ]
+        ]);
+        foreach ($multiple_fields_iterator as $field_data) {
+            $field_name = $field_data['name'];
+            if ($field_data['type'] === 'dropdown') {
+                $field_name = 'plugin_fields_' . $field_data['name'] . 'dropdowns_id';
+            }
+            if (array_key_exists($field_name, $data)) {
+                $data[$field_name] = json_encode($data[$field_name]);
             }
         }
 
@@ -1159,36 +1177,60 @@ HTML;
         $items_id  = $data['items_id'];
         $classname = self::getClassname($itemtype, $container_obj->fields['name']);
 
-        //check if data already inserted
-        $obj   = new $classname();
-        $found = $obj->find(['items_id' => $items_id]);
-        if (empty($found)) {
+        $obj = new $classname();
+        if ($obj->getFromDBByCrit(['items_id' => $items_id]) === false) {
             // add fields data
             $obj->add($data);
-
-            //construct history on itemtype object (Historical tab)
-            self::constructHistory(
-                $data['plugin_fields_containers_id'],
-                $items_id,
-                $itemtype,
-                $data
-            );
         } else {
-            $first_found = array_pop($found);
-            $data['id'] = $first_found['id'];
+            // update fields data
+            $data['id'] = $obj->fields['id'];
             $obj->update($data);
-
-            //construct history on itemtype object (Historical tab)
-            self::constructHistory(
-                $data['plugin_fields_containers_id'],
-                $items_id,
-                $itemtype,
-                $data,
-                $first_found
-            );
         }
 
+        // Add files and images for richtext fields
+        $this->addRichTextFiles($obj);
+
+        //construct history on itemtype object (Historical tab)
+        self::constructHistory(
+            $obj->input['plugin_fields_containers_id'],
+            $items_id,
+            $itemtype,
+            $obj->input,
+            $obj
+        );
+
         return true;
+    }
+
+    private function addRichTextFiles(CommonDBTM $object): void
+    {
+        global $DB;
+
+        $richtext_fields_iterator = $DB->request([
+            'FROM'  => PluginFieldsField::getTable(),
+            'WHERE' => [
+                'is_active'                   => 1,
+                'type'                        => "richtext",
+                'plugin_fields_containers_id' => $object->input['plugin_fields_containers_id']
+            ]
+        ]);
+        foreach ($richtext_fields_iterator as $field_data) {
+            $field_name = $field_data['name'];
+
+            $object->input = $object->addFiles(
+                $object->input,
+                [
+                    'force_update'  => true,
+                    'name'          => $field_name,
+                    'content_field' => $field_name
+                ]
+            );
+
+            // remove uploaded file input to ensure they will not be added to history
+            unset($object->input[sprintf('_%s', $field_name)]);
+            unset($object->input[sprintf('_prefix_%s', $field_name)]);
+            unset($object->input[sprintf('_tag_%s', $field_name)]);
+        }
     }
 
     /**
@@ -1205,7 +1247,7 @@ HTML;
         $items_id,
         $itemtype,
         $data,
-        $old_values = []
+        $field_obj
     ) {
         // Don't log few itemtypes
         $obj = new $itemtype();
@@ -1229,7 +1271,7 @@ HTML;
         $data = array_diff_key($data, $blacklist_k);
 
         //add/update values condition
-        if (empty($old_values)) {
+        if (!isset($data['id'])) {
             // -- add new item --
 
             foreach ($data as $key => $value) {
@@ -1241,7 +1283,7 @@ HTML;
                     //find searchoption
                     foreach ($searchoptions as $id_search_option => $searchoption) {
                         if ($searchoption['linkfield'] == $key) {
-                             $changes[0] = $id_search_option;
+                            $changes[0] = $id_search_option;
 
                             if ($searchoption['datatype'] === 'dropdown') {
                                 //manage dropdown values
@@ -1277,19 +1319,11 @@ HTML;
         } else {
             // -- update existing item --
 
-            //find changes
+            // construct $updates
             $updates = [];
-            foreach ($old_values as $key => $old_value) {
-                if (
-                    !isset($data[$key])
-                    || empty($old_value) && empty($data[$key])
-                    || $old_value !== '' && $data[$key] == 'NULL'
-                ) {
-                    continue;
-                }
-
-                if ($data[$key] !== $old_value) {
-                    $updates[$key] = [0, $old_value ?? '', $data[$key]];
+            if ($field_obj->updates) {
+                foreach ($field_obj->updates as $key) {
+                    $updates[$key] = [0, $field_obj->oldvalues[$key], $field_obj->input[$key]];
                 }
             }
 
@@ -1413,7 +1447,7 @@ HTML;
                     ],
                 ]);
 
-                $db_result = $iterator->next();
+                $db_result = $iterator->current();
                 if (isset($db_result['plugin_fields_' . $name . 'dropdowns_id'])) {
                     $value = $db_result['plugin_fields_' . $name . 'dropdowns_id'];
                 } else if (isset($db_result[$name])) {
@@ -1497,7 +1531,7 @@ HTML;
 
         $container = new PluginFieldsContainer();
         $itemtypes = $container->find($condition);
-        $id = 0;
+        $id = false; // default value when no container matches criterion
         if (count($itemtypes) < 1) {
             return false;
         }
@@ -1510,7 +1544,7 @@ HTML;
         }
 
         //profiles restriction
-        if (isset($_SESSION['glpiactiveprofile']['id']) && $id > 0) {
+        if (isset($_SESSION['glpiactiveprofile']['id']) && $_SESSION['glpiactiveprofile']['id'] != null && $id > 0) {
             $right = PluginFieldsProfile::getRightOnContainer($_SESSION['glpiactiveprofile']['id'], $id);
             if ($right < READ) {
                 return false;
@@ -1530,8 +1564,8 @@ HTML;
      */
     public static function postItemAdd(CommonDBTM $item)
     {
-        if (property_exists($item, 'plugin_fields_data')) {
-            $data = $item->plugin_fields_data;
+        if (array_key_exists('_plugin_fields_data', $item->input)) {
+            $data = $item->input['_plugin_fields_data'];
             $data['items_id'] = $item->getID();
             //update data
             $container = new self();
@@ -1553,8 +1587,8 @@ HTML;
     public static function preItemUpdate(CommonDBTM $item)
     {
         self::preItem($item);
-        if (property_exists($item, 'plugin_fields_data')) {
-            $data = $item->plugin_fields_data;
+        if (array_key_exists('_plugin_fields_data', $item->input)) {
+            $data = $item->input['_plugin_fields_data'];
             //update data
             $container = new self();
             if (
@@ -1602,10 +1636,16 @@ HTML;
         $loc_c->getFromDB($c_id);
 
         // check rights on $c_id
-        $right = PluginFieldsProfile::getRightOnContainer($_SESSION['glpiactiveprofile']['id'], $c_id);
-        if (($right > READ) === false) {
+
+        if (isset($_SESSION['glpiactiveprofile']['id']) && $_SESSION['glpiactiveprofile']['id'] != null && $c_id > 0) {
+            $right = PluginFieldsProfile::getRightOnContainer($_SESSION['glpiactiveprofile']['id'], $c_id);
+            if (($right > READ) === false) {
+                return;
+            }
+        } else {
             return;
         }
+
 
         // need to check if container is usable on this object entity
         $entities = [$loc_c->fields['entities_id']];
@@ -1625,9 +1665,11 @@ HTML;
 
         if (false !== ($data = self::populateData($c_id, $item))) {
             if (self::validateValues($data, $item::getType(), isset($_REQUEST['massiveaction'])) === false) {
-                return $item->input = [];
+                $item->input = [];
+                return [];
             }
-            return $item->plugin_fields_data = $data;
+            $item->input['_plugin_fields_data'] = $data;
+            return $data;
         }
 
         return;
@@ -1700,6 +1742,16 @@ HTML;
                     $item->input[$input] = str_replace(",", ".", $item->input[$input]);
                 }
                 $data[$input] = $item->input[$input];
+
+                if ($field['type'] === 'richtext') {
+                    $filename_input = sprintf('_%s', $input);
+                    $prefix_input   = sprintf('_prefix_%s', $input);
+                    $tag_input      = sprintf('_tag_%s', $input);
+
+                    $data[$filename_input] = $item->input[$filename_input] ?? [];
+                    $data[$prefix_input]   = $item->input[$prefix_input] ?? [];
+                    $data[$tag_input]      = $item->input[$tag_input] ?? [];
+                }
             }
         }
 

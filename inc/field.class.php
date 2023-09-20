@@ -328,17 +328,51 @@ class PluginFieldsField extends CommonDBChild
         return $input;
     }
 
+
+    private function cleanDisplayPreferences($itemtype, $so_id)
+    {
+        $displayPref = new DisplayPreference();
+        $displayPref->deleteByCriteria([
+            "itemtype" => $itemtype,
+            "num" => $so_id
+        ]);
+    }
+
     // phpcs:ignore PSR1.Methods.CamelCapsMethodName
     public function pre_deleteItem()
     {
+        //retrieve search option ID to clean DiplayPreferences
+        $container_obj = new PluginFieldsContainer();
+        $container_obj->getFromDB($this->fields['plugin_fields_containers_id']);
+
+        foreach (json_decode($container_obj->fields['itemtypes']) as $itemtype) {
+            $so = PluginFieldsContainer::getAddSearchOptions($itemtype, $this->fields['plugin_fields_containers_id']);
+            foreach ($so as $so_id => $so_value) {
+                if ($this->fields['type'] == 'glpi_item') {
+                    if (
+                        $so_value['field'] == "items_id_" . $this->fields['name']
+                        || $so_value['field'] == "itemtype_" . $this->fields['name']
+                    ) {
+                        $this->cleanDisplayPreferences($itemtype, $so_id);
+                    }
+                } elseif ($this->fields['type'] == 'dropdown') {
+                    if ($so_value['linkfield'] == "plugin_fields_" . $this->fields['name'] . "dropdowns_id") {
+                        $this->cleanDisplayPreferences($itemtype, $so_id);
+                    }
+                } else {
+                    if ($so_value['field'] == $this->fields['name']) {
+                        $this->cleanDisplayPreferences($itemtype, $so_id);
+                    }
+                }
+            }
+        }
+
         //remove field in container table
         if (
             $this->fields['type'] !== "header"
             && !isset($_SESSION['uninstall_fields'])
             && !isset($_SESSION['delete_container'])
         ) {
-            $container_obj = new PluginFieldsContainer();
-            $container_obj->getFromDB($this->fields['plugin_fields_containers_id']);
             foreach (json_decode($container_obj->fields['itemtypes']) as $itemtype) {
                 $classname = PluginFieldsContainer::getClassname($itemtype, $container_obj->fields['name']);
                 $classname::removeField($this->fields['name'], $this->fields['type']);
@@ -367,7 +401,7 @@ class PluginFieldsField extends CommonDBChild
         $old_container = $this->fields['plugin_fields_containers_id'];
         $old_ranking   = $this->fields['ranking'];
 
-        $D->update(
+        $DB->update(
             $table,
             [
                 'ranking' => new QueryExpression($DB->quoteName('ranking') . ' - 1')
@@ -419,7 +453,11 @@ class PluginFieldsField extends CommonDBChild
 
         if ($prevent_duplicated) {
             $i = 2;
-            while (count($field->find(['name' => $field_name])) > 0) {
+
+            // If method is call during an update, exclude current field from duplication checks.
+            $extra_condition = ($input['id'] ?? 0) > 0 ? ['NOT' => ['id' => $input['id']]] : [];
+
+            while (count($field->find(['name' => $field_name] + $extra_condition)) > 0) {
                 $field_name = $toolbox->getIncrementedSystemName($input['name'], $i);
                 $i++;
             }
@@ -457,7 +495,7 @@ class PluginFieldsField extends CommonDBChild
         ]);
 
         if (count($iterator) > 0) {
-            $data = $iterator->next();
+            $data = $iterator->current();
             return $data["rank"] + 1;
         }
         return 0;
@@ -900,7 +938,16 @@ class PluginFieldsField extends CommonDBChild
             function refreshContainer() {
                 const data = $('#{$html_id}').closest('form').serializeArray().reduce(
                     function(obj, item) {
-                        obj[item.name] = item.value;
+                        var multiple_matches = item.name.match(/^(.+)\[\]$/);
+                        if (multiple_matches) {
+                            var name = multiple_matches[1];
+                            if (!(name in obj)) {
+                                obj[name] = [];
+                            }
+                            obj[name].push(item.value);
+                        } else {
+                            obj[item.name] = item.value;
+                        }
                         return obj;
                     },
                     {}
@@ -1132,7 +1179,14 @@ JAVASCRIPT
             }
 
             if ($field['multiple']) {
-                $value = json_decode($value);
+                if (!is_array($value)) {
+                    // Value may be set:
+                    // - either from a default value in DB (it will be a JSON string),
+                    // - either from a previous input (it will be an array).
+                    //
+                    // -> Decode it only if it is not already an array.
+                    $value = json_decode($value);
+                }
             }
 
             $field['value'] = $value;
@@ -1189,11 +1243,11 @@ JAVASCRIPT
             ],
         ]);
 
-        if (count($iterator) == 0) {
+        if (count($iterator) !== 1) {
             return false;
         }
 
-        $data = $iterator->next();
+        $data = $iterator->current();
 
         //display a hidden post field to store container id
         echo Html::hidden('c_id', ['value' => $data['plugin_fields_containers_id']]);
@@ -1232,6 +1286,7 @@ JAVASCRIPT
             'header'       => __("Header", "fields"),
             'text'         => __("Text (single line)", "fields"),
             'textarea'     => __("Text (multiples lines)", "fields"),
+            'richtext'     => __("Rich Text", "fields"),
             'number'       => __("Number", "fields"),
             'url'          => __("URL", "fields"),
             'dropdown'     => __("Dropdown", "fields"),
