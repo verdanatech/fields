@@ -28,7 +28,7 @@
  * -------------------------------------------------------------------------
  */
 
-define('PLUGIN_FIELDS_VERSION', '1.21.4');
+define('PLUGIN_FIELDS_VERSION', '1.21.6');
 
 // Minimal GLPI version, inclusive
 define("PLUGIN_FIELDS_MIN_GLPI", "10.0.0");
@@ -99,7 +99,7 @@ function plugin_init_fields()
         ) {
             foreach ($_POST as $key => $value) {
                 if (!is_array($value)) {
-                    $_SESSION['plugin']['fields']['values_sent'][$key] = stripcslashes($value);
+                    $_SESSION['plugin']['fields']['values_sent'][$key] = $value;
                 }
             }
         }
