@@ -22,20 +22,22 @@
  * You should have received a copy of the GNU General Public License
  * along with Fields. If not, see <http://www.gnu.org/licenses/>.
  * -------------------------------------------------------------------------
- * @copyright Copyright (C) 2013-2023 by Fields plugin team.
+ * @copyright Copyright (C) 2013-2022 by Fields plugin team.
  * @license   GPLv2 https://www.gnu.org/licenses/gpl-2.0.html
  * @link      https://github.com/pluginsGLPI/fields
  * -------------------------------------------------------------------------
  */
 
-include('../../../inc/includes.php');
+include ('../../../inc/includes.php');
 
 $translation = new PluginFieldsLabelTranslation();
 if (isset($_POST['add'])) {
-    $translation->add($_POST);
+   $translation->add($_POST);
+
 } else if (isset($_POST['update'])) {
-    $translation->update($_POST);
+   $translation->update($_POST);
+
 } else if (isset($_POST['purge'])) {
-    $translation->delete($_POST, true);
+   $translation->delete($_POST, true);
 }
 Html::back();

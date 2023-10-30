@@ -22,7 +22,7 @@
  * You should have received a copy of the GNU General Public License
  * along with Fields. If not, see <http://www.gnu.org/licenses/>.
  * -------------------------------------------------------------------------
- * @copyright Copyright (C) 2013-2023 by Fields plugin team.
+ * @copyright Copyright (C) 2013-2022 by Fields plugin team.
  * @license   GPLv2 https://www.gnu.org/licenses/gpl-2.0.html
  * @link      https://github.com/pluginsGLPI/fields
  * -------------------------------------------------------------------------
@@ -30,71 +30,67 @@
 
 class PluginFieldsAutoloader
 {
-    protected $paths = [];
+   protected $paths = [];
 
-    public function __construct($options = null)
-    {
-        if (null !== $options) {
-            $this->setOptions($options);
-        }
-    }
+   public function __construct($options = null) {
+      if (null !== $options) {
+         $this->setOptions($options);
+      }
+   }
 
-    public function setOptions($options)
-    {
-        if (!is_array($options) && !($options instanceof \Traversable)) {
-            throw new \InvalidArgumentException();
-        }
+   public function setOptions($options) {
+      if (!is_array($options) && !($options instanceof \Traversable)) {
+         throw new \InvalidArgumentException();
+      }
 
-        foreach ($options as $path) {
-            if (!in_array($path, $this->paths)) {
-                $this->paths[] = $path;
-            }
-        }
-        return $this;
-    }
+      foreach ($options as $path) {
+         if (!in_array($path, $this->paths)) {
+            $this->paths[] = $path;
+         }
+      }
+      return $this;
+   }
 
-    public function processClassname($classname)
-    {
-        $matches = [];
-        preg_match("/Plugin([A-Z][a-z0-9]+)([A-Z]\w+)/", $classname, $matches);
+   public function processClassname($classname) {
+      preg_match("/Plugin([A-Z][a-z0-9]+)([A-Z]\w+)/", $classname, $matches);
 
-        if (count($matches) < 3) {
+      if (count($matches) < 3) {
+         return false;
+      } else {
+         return $matches;
+      }
+
+   }
+
+   public function autoload($classname) {
+      $matches = $this->processClassname($classname);
+
+      if ($matches !== false) {
+         $plugin_name = strtolower($matches[1]);
+         $class_name = strtolower($matches[2]);
+
+         if ($plugin_name !== "fields") {
             return false;
-        } else {
-            return $matches;
-        }
-    }
+         }
 
-    public function autoload($classname)
-    {
-        $matches = $this->processClassname($classname);
+         $filename = implode(".", [
+            $class_name,
+            "class",
+            "php"
+         ]);
 
-        if ($matches !== false) {
-            $plugin_name = strtolower($matches[1]);
-            $class_name = strtolower($matches[2]);
-
-            if ($plugin_name !== "fields") {
-                return false;
+         foreach ($this->paths as $path) {
+            $test = $path . DIRECTORY_SEPARATOR . $filename;
+            if (file_exists($test)) {
+               return include_once($test);
             }
+         }
+      }
+      return false;
+   }
 
-            $filename = implode(".", [
-                $class_name,
-                "class",
-                "php"
-            ]);
-
-            foreach ($this->paths as $path) {
-                 $test = $path . DIRECTORY_SEPARATOR . $filename;
-                if (file_exists($test)) {
-                    return include_once($test);
-                }
-            }
-        }
-        return false;
-    }
-
-    public function register()
-    {
-        spl_autoload_register([$this, 'autoload']);
-    }
+   public function register() {
+      spl_autoload_register([$this, 'autoload']);
+   }
 }
+

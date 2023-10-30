@@ -1,15 +1,11 @@
 <?php
 
-class %%CLASSNAME%% extends PluginFieldsAbstractContainerInstance
+class %%CLASSNAME%% extends CommonDBTM
 {
    static $rightname = '%%ITEMTYPE_RIGHT%%';
 
-   static function install() {
+   static function install($containers_id = 0) {
       global $DB;
-
-      $default_charset = DBConnection::getDefaultCharset();
-      $default_collation = DBConnection::getDefaultCollation();
-      $default_key_sign = DBConnection::getDefaultPrimaryKeySignOption();
 
       $obj = new self();
       $table = $obj->getTable();
@@ -17,33 +13,23 @@ class %%CLASSNAME%% extends PluginFieldsAbstractContainerInstance
       // create Table
       if (!$DB->tableExists($table)) {
          $query = "CREATE TABLE IF NOT EXISTS `$table` (
-                  `id`                               INT          {$default_key_sign} NOT NULL auto_increment,
-                  `items_id`                         INT          {$default_key_sign} NOT NULL,
+                  `id`                               INT(11)      NOT NULL auto_increment,
+                  `items_id`                         INT(11)      NOT NULL,
                   `itemtype`                         VARCHAR(255) DEFAULT '%%ITEMTYPE%%',
-                  `plugin_fields_containers_id`      INT          {$default_key_sign} NOT NULL DEFAULT '%%CONTAINER%%',
+                  `plugin_fields_containers_id`      INT(11)      NOT NULL DEFAULT '%%CONTAINER%%',
                   PRIMARY KEY                        (`id`),
                   UNIQUE INDEX `itemtype_item_container`
                      (`itemtype`, `items_id`, `plugin_fields_containers_id`)
-               ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC;";
-         var_dump($DB->query($query));
-         exit; 
-      } else {
-         // 1.15.4
-         // fix nullable state for 'glpi_item' field
-         $result = $DB->query("SHOW COLUMNS FROM `$table`");
-         if ($result && $DB->numrows($result) > 0) {
-            $changed = false;
-            $migration = new PluginFieldsMigration(0);
-            while ($data = $DB->fetchAssoc($result)) {
-               if (str_starts_with($data['Field'], 'itemtype_') && $data['Null'] !== 'YES') {
-               Toolbox::logDebug($data);
-                  $migration->changeField($table, $data['Field'], $data['Field'], "varchar(100) DEFAULT NULL");
-                  $changed = true;
-               }
-            }
-            if ($changed) {
-               $migration->executeMigration();
-            }
+               ) ENGINE=InnoDB  DEFAULT CHARSET=utf8 COLLATE=utf8_unicode_ci;";
+         $DB->query($query) or die ($DB->error());
+      }
+
+      // and its fields
+      if ($containers_id) {
+         foreach ($DB->request(PluginFieldsField::getTable(), [
+            'plugin_fields_containers_id' => $containers_id
+         ]) as $field) {
+            self::addField($field['name'], $field['type']);
          }
       }
    }
@@ -55,25 +41,19 @@ class %%CLASSNAME%% extends PluginFieldsAbstractContainerInstance
       return $DB->query("DROP TABLE IF EXISTS `".$obj->getTable()."`");
    }
 
-   static function addField($fieldname, $type, array $options) {
-      $migration = new PluginFieldsMigration(0);
+   static function addField($fieldname, $type) {
+      if ($type != 'header') {
+         $sql_type = PluginFieldsMigration::getSQLType($type);
 
-      $sql_fields = PluginFieldsMigration::getSQLFields($fieldname, $type, $options);
-      foreach ($sql_fields as $sql_field_name => $sql_field_type) {
-         $migration->addField(self::getTable(), $sql_field_name, $sql_field_type);
+         $migration = new PluginFieldsMigration(0);
+         $migration->addField(self::getTable(), $fieldname, $sql_type);
+         $migration->migrationOneTable(self::getTable());
       }
-
-      $migration->migrationOneTable(self::getTable());
    }
 
-   static function removeField($fieldname, $type) {
+   static function removeField($fieldname) {
       $migration = new PluginFieldsMigration(0);
-
-      $sql_fields = PluginFieldsMigration::getSQLFields($fieldname, $type);
-      foreach (array_keys($sql_fields) as $sql_field_name) {
-         $migration->dropField(self::getTable(), $sql_field_name);
-      }
-
+      $migration->dropField(self::getTable(), $fieldname);
       $migration->migrationOneTable(self::getTable());
    }
 }
