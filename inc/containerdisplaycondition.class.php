@@ -56,6 +56,7 @@ class PluginFieldsContainerDisplayCondition extends CommonDBChild
      */
     public static function installBaseData(Migration $migration, $version)
     {
+        /** @var DBmysql $DB */
         global $DB;
         $default_charset = DBConnection::getDefaultCharset();
         $default_collation = DBConnection::getDefaultCollation();
@@ -142,6 +143,7 @@ class PluginFieldsContainerDisplayCondition extends CommonDBChild
 
     public static function uninstall()
     {
+        /** @var DBmysql $DB */
         global $DB;
         $DB->query("DROP TABLE IF EXISTS `" . self::getTable() . "`");
         return true;
@@ -175,6 +177,7 @@ class PluginFieldsContainerDisplayCondition extends CommonDBChild
 
     public static function getDisplayConditionForContainer(int $container_id): array
     {
+        /** @var DBmysql $DB */
         global $DB;
         $iterator = $DB->request([
             'SELECT' => [
@@ -196,7 +199,10 @@ class PluginFieldsContainerDisplayCondition extends CommonDBChild
 
     private static function getItemtypesForContainer(int $container_id): array
     {
+        /** @var DBmysql $DB */
         global $DB;
+
+        $results = [];
 
         $iterator = $DB->request([
             'SELECT' => ['itemtypes'],
@@ -212,9 +218,9 @@ class PluginFieldsContainerDisplayCondition extends CommonDBChild
             foreach ($itemtypes as $itemtype) {
                 $results[$itemtype] = $itemtype::getTypeName();
             }
-            return $results;
         }
-        return [];
+
+        return $results;
     }
 
 
@@ -268,6 +274,11 @@ class PluginFieldsContainerDisplayCondition extends CommonDBChild
                 true,
                 is_a($twig_params['dropdown_itemtype'], CommonTreeDropdown::class, true)
             );
+
+            $twig_params['dropdown_option'] = [];
+            if ($twig_params['dropdown_itemtype'] == User::class) {
+                $twig_params['dropdown_option'] = ['right' => 'all'];
+            }
         } elseif ($so['datatype'] == 'specific' && get_parent_class($itemtype) == CommonITILObject::getType()) {
             $twig_params['list_conditions']   = self::getComparisonOperators(true);
             $twig_params['is_specific'] = true;
@@ -551,6 +562,8 @@ class PluginFieldsContainerDisplayCondition extends CommonDBChild
                 : self::removeBlackListedOption(Search::getOptions($this->fields['itemtype']), $this->fields['itemtype']),
         ];
         TemplateRenderer::getInstance()->display('@fields/forms/container_display_condition.html.twig', $twig_params);
+
+        return true;
     }
 
     public function getCloneRelations(): array

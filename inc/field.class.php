@@ -63,6 +63,7 @@ class PluginFieldsField extends CommonDBChild
      */
     public static function installBaseData(Migration $migration, $version)
     {
+        /** @var DBmysql $DB */
         global $DB;
 
         $default_charset = DBConnection::getDefaultCharset();
@@ -170,6 +171,7 @@ class PluginFieldsField extends CommonDBChild
      */
     private static function migrateToStableSO(Migration $migration): void
     {
+        /** @var DBmysql $DB */
         global $DB;
 
         // Flatten itemtype list
@@ -229,6 +231,7 @@ class PluginFieldsField extends CommonDBChild
 
     public static function uninstall()
     {
+        /** @var DBmysql $DB */
         global $DB;
 
         $DB->query("DROP TABLE IF EXISTS `" . self::getTable() . "`");
@@ -272,7 +275,7 @@ class PluginFieldsField extends CommonDBChild
 
             //reject adding for same dropdown on same bloc
             if (!empty($found)) {
-                Session::AddMessageAfterRedirect(__("You cannot add same field 'dropdown' on same bloc", 'fields', false, ERROR));
+                Session::AddMessageAfterRedirect(__("You cannot add same field 'dropdown' on same bloc", 'fields'), false, ERROR);
                 return false;
             }
 
@@ -395,6 +398,7 @@ class PluginFieldsField extends CommonDBChild
     // phpcs:ignore PSR1.Methods.CamelCapsMethodName
     public function post_purgeItem()
     {
+        /** @var DBmysql $DB */
         global $DB;
 
         $table         = getTableForItemType(__CLASS__);
@@ -482,6 +486,7 @@ class PluginFieldsField extends CommonDBChild
      */
     public function getNextRanking()
     {
+        /** @var DBmysql $DB */
         global $DB;
 
         $iterator = $DB->request([
@@ -538,6 +543,10 @@ class PluginFieldsField extends CommonDBChild
 
     public function showSummary($container)
     {
+        /**
+         * @var DBmysql $DB
+         * @var array   $CFG_GLPI
+         */
         global $DB, $CFG_GLPI;
 
         $cID = $container->fields['id'];
@@ -600,7 +609,8 @@ class PluginFieldsField extends CommonDBChild
                     echo "<tr class='tab_bg_2' style='cursor:pointer'>";
 
                     echo "<td>";
-                    echo "<a href='" . Plugin::getWebDir('fields') . "/front/field.form.php?id={$this->getID()}'>{$this->fields['label']}</a>";
+                    $label = !empty($this->fields['label']) ? $this->fields['label'] : NOT_AVAILABLE;
+                    echo "<a href='" . Plugin::getWebDir('fields') . "/front/field.form.php?id={$this->getID()}'>{$label}</a>";
                     echo "</td>";
                     echo "<td>" . $fields_type[$this->fields['type']] . "</td>";
                     echo "<td>" ;
@@ -676,8 +686,8 @@ class PluginFieldsField extends CommonDBChild
     {
         $rand = mt_rand();
 
+        $container = new PluginFieldsContainer();
         if (isset($options['parent_id']) && !empty($options['parent_id'])) {
-            $container = new PluginFieldsContainer();
             $container->getFromDB($options['parent_id']);
         } else if (
             isset($options['parent'])
@@ -697,7 +707,7 @@ class PluginFieldsField extends CommonDBChild
         }
 
         $this->initForm($ID, $options);
-        $this->showFormHeader($ID, $options);
+        $this->showFormHeader($options);
 
         echo "<tr>";
         echo "<td>" . __("Label") . " : </td>";
@@ -774,6 +784,8 @@ class PluginFieldsField extends CommonDBChild
         echo "</tr>";
 
         $this->showFormButtons($options);
+
+        return true;
     }
 
     public static function showForTabContainer($c_id, $item)
@@ -852,12 +864,12 @@ class PluginFieldsField extends CommonDBChild
         $item = $params['item'];
 
         $functions = array_column(debug_backtrace(), 'function');
-
         $subtype = isset($_SESSION['glpi_tabs'][strtolower($item::getType())]) ? $_SESSION['glpi_tabs'][strtolower($item::getType())] : "";
         $type = substr($subtype, -strlen('$main')) === '$main'
             || in_array('showForm', $functions)
             || in_array('showPrimaryForm', $functions)
             || in_array('showFormHelpdesk', $functions)
+            || $item::getType() == ITILSolution::class
                 ? 'dom'
                 : 'domtab';
         if ($subtype == -1) {
@@ -906,6 +918,7 @@ class PluginFieldsField extends CommonDBChild
             strpos($current_url, ".form.php") === false
             && strpos($current_url, ".injector.php") === false
             && strpos($current_url, ".public.php") === false
+            && strpos($current_url, "ajax/timeline.php") === false // ITILSolution load from timeline
         ) {
             return false;
         }
@@ -1033,6 +1046,7 @@ class PluginFieldsField extends CommonDBChild
 JAVASCRIPT
         );
     }
+
 
     public static function prepareHtmlFields(
         $fields,
@@ -1222,6 +1236,7 @@ JAVASCRIPT
 
     public static function showSingle($itemtype, $searchOption, $massiveaction = false)
     {
+        /** @var DBmysql $DB */
         global $DB;
 
         //clean dropdown [pre/su]fix if exists

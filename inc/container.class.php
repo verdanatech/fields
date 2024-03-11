@@ -70,6 +70,7 @@ class PluginFieldsContainer extends CommonDBTM
      */
     public static function installBaseData(Migration $migration, $version)
     {
+        /** @var DBmysql $DB */
         global $DB;
 
         $default_charset = DBConnection::getDefaultCharset();
@@ -158,6 +159,7 @@ class PluginFieldsContainer extends CommonDBTM
      */
     public static function installUserData(Migration $migration, $version)
     {
+        /** @var DBmysql $DB */
         global $DB;
 
         // -> 0.90-1.3: generated class moved
@@ -321,6 +323,27 @@ class PluginFieldsContainer extends CommonDBTM
             }
         }
 
+
+        //Ticket Solution tab no longer exist disable it
+        //Problem Solution tab no longer exist disable it
+        //Change Analysis / Solution / Plans no longer exist disable it
+        $DB->update(
+            'glpi_plugin_fields_containers',
+            [
+                'is_active' => 0,
+            ],
+            [
+                'type' => 'domtab',
+                [
+                    'OR' => [
+                        ['subtype' => ['LIKE', 'Ticket$2']],
+                        ['subtype' => ['LIKE', 'Problem$2']],
+                        ['subtype' => ['LIKE', 'Change$%']],
+                    ],
+                ],
+            ]
+        );
+
         // Ensure data is update before regenerating files.
         $migration->executeMigration();
 
@@ -337,6 +360,7 @@ class PluginFieldsContainer extends CommonDBTM
 
     public static function uninstall()
     {
+        /** @var DBmysql $DB */
         global $DB;
 
         //uninstall container table and class
@@ -474,6 +498,8 @@ class PluginFieldsContainer extends CommonDBTM
                 }
                 return $obj;
         }
+
+        return '';
     }
 
 
@@ -487,7 +513,7 @@ class PluginFieldsContainer extends CommonDBTM
                 return Dropdown::showFromArray($name, self::getTypes(), $options);
             case $this->getTable() . '.itemtypes':
                 $options['display'] = false;
-                return Dropdown::showFromArray($name, self::getItemtypes(), $options);
+                return Dropdown::showFromArray($name, self::getItemtypes(false), $options);
         }
 
         return parent::getValueToSelect($field_id_or_search_options, $name, $values, $options);
@@ -661,6 +687,7 @@ class PluginFieldsContainer extends CommonDBTM
     // phpcs:ignore PSR1.Methods.CamelCapsMethodName
     public function pre_deleteItem()
     {
+        /** @var DBmysql $DB */
         global $DB;
 
         $_SESSION['delete_container'] = true;
@@ -872,11 +899,17 @@ HTML;
     public static function showFormItemtype($params = [])
     {
         $is_domtab = isset($params['type']) && $params['type'] == 'domtab';
+        $values = self::getItemtypes($is_domtab);
+
+        //remove ITISolution from values if type is tab
+        if (!isset($params['type']) || (isset($params['type']) && $params['type'] == 'tab')) {
+            unset($values[__('Assistance')]['ITILSolution']);
+        }
 
         $rand = $params['rand'];
         Dropdown::showFromArray(
             "itemtypes",
-            self::getItemtypes($is_domtab),
+            $values,
             [
                 'rand'                => $rand,
                 'multiple'            => !$is_domtab,
@@ -999,6 +1032,7 @@ HTML;
 
     public static function getEntries($type = 'tab', $full = false): array
     {
+        /** @var DBmysql $DB */
         global $DB;
 
         $condition = [
@@ -1060,6 +1094,7 @@ HTML;
 
     public static function getUsedItemtypes($type = 'all', $must_be_active = false)
     {
+        /** @var DBmysql $DB */
         global $DB;
         $itemtypes = [];
         $where = [];
@@ -1114,6 +1149,8 @@ HTML;
             }
             return $tabs_entries;
         }
+
+        return '';
     }
 
 
@@ -1133,6 +1170,8 @@ HTML;
                 return PluginFieldsField::showForTabContainer($data['id'], $item);
             }
         }
+
+        return true;
     }
 
     /**
@@ -1146,6 +1185,7 @@ HTML;
      */
     public function updateFieldsValues($data, $itemtype, $massiveaction = false)
     {
+        /** @var DBmysql $DB */
         global $DB;
 
         if (self::validateValues($data, $itemtype, $massiveaction) === false) {
@@ -1206,6 +1246,7 @@ HTML;
 
     private function addRichTextFiles(CommonDBTM $object): void
     {
+        /** @var DBmysql $DB */
         global $DB;
 
         $richtext_fields_iterator = $DB->request([
@@ -1383,6 +1424,7 @@ HTML;
      */
     public static function validateValues($data, $itemtype, $massiveaction)
     {
+        /** @var DBmysql $DB */
         global $DB;
 
         $valid         = true;
@@ -1397,11 +1439,19 @@ HTML;
             'plugin_fields_containers_id' => $data['plugin_fields_containers_id']
         ]);
 
-        // Apply status overrides
+        $status_value = null;
         $status_field_name = PluginFieldsStatusOverride::getStatusFieldName($itemtype);
-        $status_overrides = array_key_exists($status_field_name, $data) && $data[$status_field_name] !== null
-            ? PluginFieldsStatusOverride::getOverridesForItemtypeAndStatus($container->getID(), $itemtype, $data[$status_field_name])
+        if ($container->fields['type'] === 'dom') {
+            $status_value = $data[$status_field_name] ?? null;
+        } else {
+            $relatedItem = new $itemtype();
+            $status_value = $relatedItem->fields[$status_field_name] ?? null;
+        }
+        // Apply status overrides
+        $status_overrides = $status_value !== null
+            ? PluginFieldsStatusOverride::getOverridesForItemtypeAndStatus($container->getID(), $itemtype, $status_value)
             : [];
+
         foreach ($status_overrides as $status_override) {
             if (isset($fields[$status_override['plugin_fields_fields_id']])) {
                 $fields[$status_override['plugin_fields_fields_id']]['is_readonly'] = $status_override['is_readonly'];
@@ -1576,6 +1626,8 @@ HTML;
             }
             return $item->input = [];
         }
+
+        return true;
     }
 
     /**
@@ -1601,6 +1653,8 @@ HTML;
             }
             return $item->input = [];
         }
+
+        return true;
     }
 
 
@@ -1754,6 +1808,34 @@ HTML;
                     $data[$prefix_input]   = $item->input[$prefix_input] ?? [];
                     $data[$tag_input]      = $item->input[$tag_input] ?? [];
                 }
+            } else {
+                //the absence of the field in the input may be due to the fact that the input allows multiple selection
+                // ex my_dom[]
+                //in these conditions, the input is never sent by the browser
+                if ($field['multiple']) {
+                    //handle multi dropodwn field
+                    if ($field['type'] == 'dropdown') {
+                        $multiple_key = sprintf('plugin_fields_%sdropdowns_id', $field['name']);
+                        //values are defined by user
+                        if (isset($item->input[$multiple_key])) {
+                            $data[$multiple_key] = $item->input[$multiple_key];
+                        } else { //multi dropdown is empty or has been emptied
+                            $data[$multiple_key] = [];
+                        }
+                        $has_fields = true;
+                    }
+
+                    //managed multi GLPI item dropdown field
+                    if (preg_match('/^dropdown-(?<type>.+)$/', $field['type'], $match) === 1) {
+                        //values are defined by user
+                        if (isset($item->input[$field['name']])) {
+                            $data[$field['name']] = $item->input[$field['name']];
+                        } else { //multi dropdown is empty or has been emptied
+                            $data[$field['name']] = [];
+                        }
+                        $has_fields = true;
+                    }
+                }
             }
         }
 
@@ -1766,6 +1848,7 @@ HTML;
 
     public static function getAddSearchOptions($itemtype, $containers_id = false)
     {
+        /** @var DBmysql $DB */
         global $DB;
 
         $opt = [];
@@ -1890,6 +1973,7 @@ HTML;
                 if ($data['multiple']) {
                     $opt[$i]['table']      = $tablename;
                     $opt[$i]['field']      = $field_name;
+                    $opt[$i]['searchtype']   = ['equals', 'notequals'];
                     $opt[$i]['datatype']   = 'specific';
                 } else {
                     $opt[$i]['table']      = 'glpi_plugin_fields_' . $data['field_name'] . 'dropdowns';
@@ -1909,6 +1993,7 @@ HTML;
             ) {
                 if ($data['multiple']) {
                     $opt[$i]['datatype']   = 'specific';
+                    $opt[$i]['searchtype']   = ['equals', 'notequals'];
                 } else {
                     $opt[$i]['table']      = CommonDBTM::getTable($dropdown_matches['class']);
                     $opt[$i]['field']      = 'name';
@@ -1964,19 +2049,6 @@ HTML;
     {
         $tabs = [];
         switch ($item::getType()) {
-            case Ticket::getType():
-            case Problem::getType():
-                $tabs = [
-                    $item::getType() . '$2' => __('Solution')
-                ];
-                break;
-            case Change::getType():
-                $tabs = [
-                    'Change$1' => __('Analysis'),
-                    'Change$2' => __('Solution'),
-                    'Change$3' => __('Plans')
-                ];
-                break;
             case Entity::getType():
                 $tabs = [
                     'Entity$2' => __('Address'),

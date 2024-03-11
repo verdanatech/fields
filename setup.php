@@ -28,7 +28,7 @@
  * -------------------------------------------------------------------------
  */
 
-define('PLUGIN_FIELDS_VERSION', '1.21.6');
+define('PLUGIN_FIELDS_VERSION', '1.21.8');
 
 // Minimal GLPI version, inclusive
 define("PLUGIN_FIELDS_MIN_GLPI", "10.0.0");
@@ -73,6 +73,7 @@ use Symfony\Component\Yaml\Yaml;
  */
 function plugin_init_fields()
 {
+    /** @var array $PLUGIN_HOOKS */
     global $PLUGIN_HOOKS;
 
     $PLUGIN_HOOKS['csrf_compliant']['fields'] = true;
@@ -93,7 +94,7 @@ function plugin_init_fields()
 
         // When a Category is changed during ticket creation
         if (
-            isset($_POST) && !empty($_POST)
+            !empty($_POST)
             && isset($_POST['_plugin_fields_type'])
             && $_SERVER['REQUEST_URI'] ?? '' == Ticket::getFormURL()
         ) {
@@ -235,6 +236,7 @@ function plugin_fields_check_prerequisites()
  */
 function plugin_fields_checkFiles()
 {
+    /** @var DBmysql $DB */
     global $DB;
 
     // Clean all existing files
@@ -262,6 +264,7 @@ function plugin_fields_checkFiles()
 
 function plugin_fields_exportBlockAsYaml($container_id = null)
 {
+    /** @var DBmysql $DB */
     global $DB;
 
     $yaml_conf = [

@@ -246,12 +246,14 @@ function plugin_fields_getRuleActions($params = [])
 
 function plugin_fields_rule_matched($params = [])
 {
+    /** @var DBmysql $DB */
     global $DB;
 
     $container = new PluginFieldsContainer();
 
     switch ($params['sub_type']) {
         case "PluginFusioninventoryTaskpostactionRule":
+            /** @phpstan-ignore-next-line */
             $agent = new PluginFusioninventoryAgent();
 
             if (isset($params['input']['plugin_fusioninventory_agents_id'])) {
@@ -319,6 +321,7 @@ function plugin_fields_giveItem($itemtype, $ID, $data, $num)
  */
 function plugin_datainjection_populate_fields()
 {
+    /** @var array $INJECTABLE_TYPES */
     global $INJECTABLE_TYPES;
 
     $container = new PluginFieldsContainer();
@@ -329,6 +332,48 @@ function plugin_datainjection_populate_fields()
         foreach ($types as $type) {
             $classname = PluginFieldsContainer::getClassname($type, $values['name'], 'Injection');
             $INJECTABLE_TYPES[$classname] = 'fields';
+        }
+    }
+}
+
+function plugin_fields_addWhere($link, $nott, $itemtype, $ID, $val, $searchtype)
+{
+    /** @var \DBmysql $DB */
+    global $DB;
+
+    $searchopt = &Search::getOptions($itemtype);
+    $table     = $searchopt[$ID]["table"];
+    $field     = $searchopt[$ID]["field"];
+
+    $field_field = new PluginFieldsField();
+
+    // if 'multiple' field with name is found -> 'Dropdown-XXXX' case
+    // update WHERE clause with LIKE statement
+    if (
+        $field_field->getFromDBByCrit(
+            [
+                'name' => $field,
+                'multiple' => true
+            ]
+        )
+    ) {
+        return $link . $DB->quoteName("$table" . "_" . "$field") . "." .  $DB->quoteName($field) . "LIKE " . $DB->quoteValue("%\"$val\"%") ;
+    } else {
+        // if 'multiple' field with cleaned name is found -> 'dropdown' case
+        // update WHERE clause with LIKE statement
+        $cleanfield = str_replace("plugin_fields_", "", $field);
+        $cleanfield = str_replace("dropdowns_id", "", $cleanfield);
+        if (
+            $field_field->getFromDBByCrit(
+                [
+                    'name' => $cleanfield,
+                    'multiple' => true
+                ]
+            )
+        ) {
+            return $link . $DB->quoteName("$table" . "_" . "$cleanfield") . "." .  $DB->quoteName($field) . "LIKE " . $DB->quoteValue("%\"$val\"%") ;
+        } else {
+            return false;
         }
     }
 }
