@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [unrelease]
+
+## [1.21.13] - 2024-09-12
+
+### CVE-2024-45600
+
+- Fix SQL injection
+
+### Added
+
+- Add ```ComputerVirtualMachine```
+
+## [1.21.12] - 2024-09-06
+
+### Fixed
+
+- Fix handling of empty mandatory fields in generic objects.
+- Fix massive update for dropdown (shared by several containers)
+
+## [1.21.11] - 2024-07-10
+
+### Fixed
+
+- Fix ```strpslashes``` log error
+- Update main item ```date_mod``` after updating additional fields
+- Fix ```datainjection``` mapping error with additional fields
+
 ## [1.21.10] - 2024-06-11
 
 ### Fixed

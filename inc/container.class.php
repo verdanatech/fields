@@ -1163,7 +1163,7 @@ HTML;
 
         //retrieve container for current tab
         $container = new self();
-        $found_c   = $container->find(['type' => 'tab', 'name' => $tabnum, 'is_active' => 1]);
+        $found_c   = $container->find(['type' => 'tab', 'name' => Sanitizer::sanitize($tabnum), 'is_active' => 1]);
         foreach ($found_c as $data) {
             $dataitemtypes = json_decode($data['itemtypes']);
             if (in_array(get_class($item), $dataitemtypes) != false) {
@@ -1319,7 +1319,8 @@ HTML;
 
             foreach ($data as $key => $value) {
                 //log only not empty values
-                if (!empty($value)) {
+                //do not log if value is empty or if dom name is part of file upload
+                if (!empty($value) && strpos($key, '_uploader_') === false) {
                     //prepare log
                     $changes = [0, "N/A", $value];
 
@@ -1487,24 +1488,6 @@ HTML;
                 $value = $data[$name];
             } elseif (isset($data['plugin_fields_' . $name . 'dropdowns_id'])) {
                 $value = $data['plugin_fields_' . $name . 'dropdowns_id'];
-            } elseif ($field['mandatory'] == 1 && isset($data['items_id'])) {
-                $tablename = getTableForItemType(self::getClassname($itemtype, $container->fields['name']));
-
-                $iterator = $DB->request([
-                    'FROM' => $tablename,
-                    'WHERE' => [
-                        'itemtype' => $itemtype,
-                        'items_id' => $data['items_id'],
-                        'plugin_fields_containers_id' => $data['plugin_fields_containers_id'],
-                    ],
-                ]);
-
-                $db_result = $iterator->current();
-                if (isset($db_result['plugin_fields_' . $name . 'dropdowns_id'])) {
-                    $value = $db_result['plugin_fields_' . $name . 'dropdowns_id'];
-                } elseif (isset($db_result[$name])) {
-                    $value = $db_result[$name];
-                }
             } else {
                 if ($massiveaction) {
                     continue;
@@ -1649,6 +1632,7 @@ HTML;
                 count($data) == 0
                 || $container->updateFieldsValues($data, $item->getType(), isset($_REQUEST['massiveaction']))
             ) {
+                $item->input['date_mod'] = $_SESSION["glpi_currenttime"];
                 return true;
             }
             return $item->input = [];
@@ -1835,10 +1819,10 @@ HTML;
                         //values are defined by user
                         if (isset($item->input[$field['name']])) {
                             $data[$field['name']] = $item->input[$field['name']];
+                            $has_fields = true;
                         } else { //multi dropdown is empty or has been emptied
                             $data[$field['name']] = [];
                         }
-                        $has_fields = true;
                     }
                 }
             }
