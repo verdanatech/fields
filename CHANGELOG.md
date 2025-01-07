@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [UNRELAESE]
+
+## [1.21.17] - 2024-12-26
+
+### Fixed
+
+- Force decimal `datatype` of `numeric` fields  for more accurate display.
+- Do not destroy the dropdown table/class if it is being used by another container.
+- Fix fields updates with multiple containers via the API.
+
+## [1.21.16] - 2024-12-11
+
+### Fixed
+
+- Fix `container` to prevent calls from `API` returning full container data
+
 ## [1.21.15] - 2024-10-09
 
 ### Fixed

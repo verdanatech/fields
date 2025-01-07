@@ -28,7 +28,7 @@
  * -------------------------------------------------------------------------
  */
 
-define('PLUGIN_FIELDS_VERSION', '1.21.15');
+define('PLUGIN_FIELDS_VERSION', '1.21.17');
 
 // Minimal GLPI version, inclusive
 define('PLUGIN_FIELDS_MIN_GLPI', '10.0.0');
@@ -265,6 +265,15 @@ function plugin_fields_checkFiles()
     // Clean all existing files
     array_map('unlink', glob(PLUGINFIELDS_DOC_DIR . '/*/*'));
 
+    // Regenerate dropdowns
+    if ($DB->tableExists(PluginFieldsField::getTable())) {
+        $fields_obj = new PluginFieldsField();
+        $fields     = $fields_obj->find(['type' => 'dropdown']);
+        foreach ($fields as $field) {
+            PluginFieldsDropdown::create($field);
+        }
+    }
+
     // Regenerate containers
     if ($DB->tableExists(PluginFieldsContainer::getTable())) {
         $container_obj = new PluginFieldsContainer();
@@ -275,14 +284,6 @@ function plugin_fields_checkFiles()
         }
     }
 
-    // Regenerate dropdowns
-    if ($DB->tableExists(PluginFieldsField::getTable())) {
-        $fields_obj = new PluginFieldsField();
-        $fields     = $fields_obj->find(['type' => 'dropdown']);
-        foreach ($fields as $field) {
-            PluginFieldsDropdown::create($field);
-        }
-    }
 }
 
 function plugin_fields_exportBlockAsYaml($container_id = null)
