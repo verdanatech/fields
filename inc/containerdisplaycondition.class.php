@@ -313,8 +313,9 @@ class PluginFieldsContainerDisplayCondition extends CommonDBChild
         if ($so['datatype'] == 'dropdown' || ($so['datatype'] == 'itemlink' && $so['table'] !== $itemtypetable)) {
             $dropdown_itemtype = getItemTypeForTable($so['table']);
             $dropdown          = new $dropdown_itemtype();
-            $dropdown->getFromDB($value);
-            $raw_value = $dropdown->fields['name'];
+            if ($dropdown->getFromDB($value)) {
+                $raw_value = $dropdown->fields['name'];
+            }
         } elseif ($so['datatype'] == 'specific' && get_parent_class($itemtype) == CommonITILObject::getType()) {
             switch ($so['field']) {
                 case 'status':
@@ -380,11 +381,11 @@ class PluginFieldsContainerDisplayCondition extends CommonDBChild
         foreach ($array as $subKey => $subArray) {
             if (
                 isset($subArray['table']) && in_array($subArray['table'], $allowed_table)
-                                          && (isset($subArray['datatype']) && in_array($subArray['datatype'], $allowed_datatype))
-                                          && !isset($subArray['nosearch']) //Exclude SO with no search
-                                          && !isset($subArray['usehaving']) //Exclude count SO ex: Ticket -> Number of sons tickets
-                                          && !isset($subArray['forcegroupby']) //Exclude 1-n relation ex: Ticket_User
-                                          && !isset($subArray['computation']) //Exclude SO with computation Ex : Ticket -> Time to own exceeded
+                && (isset($subArray['datatype']) && in_array($subArray['datatype'], $allowed_datatype))
+                && !isset($subArray['nosearch']) //Exclude SO with no search
+                && !isset($subArray['usehaving']) //Exclude count SO ex: Ticket -> Number of sons tickets
+                && !isset($subArray['forcegroupby']) //Exclude 1-n relation ex: Ticket_User
+                && !isset($subArray['computation']) //Exclude SO with computation Ex : Ticket -> Time to own exceeded
             ) {
                 $allowed_so[$subKey] = $subArray['name'];
             }

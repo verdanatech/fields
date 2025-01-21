@@ -508,7 +508,7 @@ class PluginFieldsContainer extends CommonDBTM
     public function getValueToSelect($field_id_or_search_options, $name = '', $values = '', $options = [])
     {
         switch ($field_id_or_search_options['table'] . '.' . $field_id_or_search_options['field']) {
-                // For searchoption "Type"
+            // For searchoption "Type"
             case $this->getTable() . '.type':
                 $options['display'] = false;
 
@@ -985,8 +985,7 @@ HTML;
                     $out .= Dropdown::showFromArray(
                         'subtype',
                         $tabs,
-                        [
-                            'value'      => $params['subtype'],
+                        ['value'      => $params['subtype'],
                             'width'   => '100%',
                             'display' => false,
                         ],
@@ -1343,8 +1342,7 @@ HTML;
 
                             if ($searchoption['datatype'] === 'dropdown') {
                                 //manage dropdown values
-                                $changes = [
-                                    $id_search_option,
+                                $changes = [$id_search_option,
                                     '',
                                     Dropdown::getDropdownName($searchoption['table'], $value),
                                 ];
@@ -1538,17 +1536,17 @@ HTML;
 
         if (!empty($empty_errors)) {
             Session::AddMessageAfterRedirect(__('Some mandatory fields are empty', 'fields') .
-                ' : ' . implode(', ', $empty_errors), false, ERROR);
+                                          ' : ' . implode(', ', $empty_errors), false, ERROR);
         }
 
         if (!empty($number_errors)) {
             Session::AddMessageAfterRedirect(__('Some numeric fields contains non numeric values', 'fields') .
-                ' : ' . implode(', ', $number_errors), false, ERROR);
+                                          ' : ' . implode(', ', $number_errors), false, ERROR);
         }
 
         if (!empty($url_errors)) {
             Session::AddMessageAfterRedirect(__('Some URL fields contains invalid links', 'fields') .
-                ' : ' . implode(', ', $url_errors), false, ERROR);
+                                          ' : ' . implode(', ', $url_errors), false, ERROR);
         }
 
         return $valid;
@@ -1562,8 +1560,8 @@ HTML;
         ];
 
         $entity = isset($_SESSION['glpiactiveentities'])
-            ? $_SESSION['glpiactiveentities']
-            : 0;
+                  ? $_SESSION['glpiactiveentities']
+                  : 0;
         $condition += getEntitiesRestrictCriteria('', '', $entity, true, true);
 
         if ($subtype != '') {
@@ -1879,8 +1877,8 @@ HTML;
                 'glpi_plugin_fields_containers.label AS container_label',
                 (
                     Session::isCron()
-                    ? new QueryExpression(sprintf('%s AS %s', READ + CREATE, $DB->quoteName('right')))
-                    : 'glpi_plugin_fields_profiles.right'
+                        ? new QueryExpression(sprintf('%s AS %s', READ + CREATE, $DB->quoteName('right')))
+                        : 'glpi_plugin_fields_profiles.right'
                 ),
             ],
             'DISTINCT'   => true,

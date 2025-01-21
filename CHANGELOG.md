@@ -7,13 +7,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## [UNRELAESE]
 
+## [1.21.18] - 2024-01-16
+
+- Fix `PluginFieldsContainerDisplayCondition` display when value is no more available.
+- Fix issue where the value of custom fields could not be saved
+
 ## [1.21.17] - 2024-12-26
 
 ### Fixed
 
 - Force decimal `datatype` of `numeric` fields  for more accurate display.
 - Do not destroy the dropdown table/class if it is being used by another container.
-- Fix fields updates with multiple containers via the API.
 
 ## [1.21.16] - 2024-12-11
 
