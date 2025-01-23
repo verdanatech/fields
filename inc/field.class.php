@@ -1203,7 +1203,7 @@ JAVASCRIPT
                         $value['items_id'] = $item->input['items_id_' . $field['name']] ?? '';
                     }
                 } else {
-                    if (isset($_SESSION['plugin']['fields']['values_sent'][$field['name']])) {
+                    if (isset($_SESSION['plugin']['fields']['values_sent'][$field['name']]) && isset($_SESSION['plugin']['fields']['values_sent']['id']) && $_SESSION['plugin']['fields']['values_sent']['id'] == $item->fields['id']) {
                         $value = $_SESSION['plugin']['fields']['values_sent'][$field['name']];
                     } elseif (isset($item->input[$field['name']])) {
                         // find from $item->input due to ajax refresh container
