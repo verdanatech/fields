@@ -5,9 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [UNRELAESE]
+## [UNRELEASE]
+
+## [1.21.21] - 2025-03-21
+
+### Fixed
+
+- Fix of GLPI native fields update for objects with `fields` containers.
+
+## [1.21.20] - 2025-03-20
+
+### Fixed
+
+- Fix `numeric` field search
+- Fix containers migration while adding `is_recursive` field
+- Fix container update from other context (like plugins)
+- Fix "not equals" search operator for dropdown `multiple`
+- Fix container data (`entities_id`) insert from `dom` type
+
+## [1.21.19] - 2025-02-03
+
+### Fixed
+
+- Fix container update from `API`
+- Fix: fix default value for `dropdown` field to avoid empty dropdown
 
 ## [1.21.18] - 2024-01-16
+
+### Fixed
 
 - Fix `PluginFieldsContainerDisplayCondition` display when value is no more available.
 - Fix issue where the value of custom fields could not be saved
