@@ -14,7 +14,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: GLPI Plugin - Fields\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-01-06 01:02+0000\n"
+"POT-Creation-Date: 2025-02-10 01:02+0000\n"
 "PO-Revision-Date: 2015-09-18 09:34+0000\n"
 "Last-Translator: Ilia Kireev, 2024\n"
 "Language-Team: Russian (Russia) (http://app.transifex.com/teclib/glpi-plugin-plugin-fields/language/ru_RU/)\n"
@@ -53,12 +53,12 @@ msgstr "Добавить условие для скрытия блока"
 msgid "Add new status override"
 msgstr "Добавить новое переопределение статуса"
 
-#: inc/container.class.php:1037
+#: inc/container.class.php:1040
 msgid "Add tab"
 msgstr "Добавить вкладку"
 
-#: setup.php:223 front/container.form.php:63 front/container.php:34
-#: inc/menu.class.php:37
+#: front/container.php:34 front/container.form.php:63 inc/menu.class.php:37
+#: setup.php:223
 msgid "Additional fields"
 msgstr "Дополнительные поля"
 
@@ -66,7 +66,7 @@ msgstr "Дополнительные поля"
 msgid "Allowed values"
 msgstr "Допустимые значения"
 
-#: inc/container.class.php:780
+#: inc/container.class.php:781
 msgid "Block"
 msgstr "Блок"
 
@@ -79,7 +79,7 @@ msgid "Component items"
 msgstr "Составные элементы"
 
 #: templates/container_display_conditions.html.twig
-#: inc/containerdisplaycondition.class.php:154
+#: inc/containerdisplaycondition.class.php:155
 msgid "Condition to hide block"
 msgid_plural "Conditions to hide block"
 msgstr[0] "Условие для скрытия блока"
@@ -87,7 +87,7 @@ msgstr[1] "Условия для скрытия блока"
 msgstr[2] "Условия для скрытия блока"
 msgstr[3] "Условия для скрытия блока"
 
-#: inc/container.class.php:597
+#: inc/container.class.php:600
 msgid ""
 "Container name is too long for database (digits in name are replaced by "
 "characters, try to remove them)"
@@ -128,7 +128,7 @@ msgstr "Выпадающий список"
 msgid "Everything is in order - no action needed."
 msgstr "Все в порядке - никаких действий не требуется."
 
-#: inc/container.class.php:53 inc/container.class.php:789
+#: inc/container.class.php:53 inc/container.class.php:790
 msgid "Export to YAML"
 msgstr "Экспорт в YAML"
 
@@ -162,19 +162,19 @@ msgstr "GLPI объект"
 msgid "Header"
 msgstr "Заголовок"
 
-#: inc/container.class.php:1038
+#: inc/container.class.php:1041
 msgid "Insertion in the form (before save button)"
 msgstr "Добавить в виде (до кнопки сохранения)"
 
-#: inc/container.class.php:1039
+#: inc/container.class.php:1042
 msgid "Insertion in the form of a specific tab (before save button)"
 msgstr "Добавить в виде конкретной вкладки (до кнопки сохранения)"
 
-#: inc/labeltranslation.class.php:198
+#: inc/labeltranslation.class.php:205
 msgid "Label"
 msgstr "Метка"
 
-#: inc/labeltranslation.class.php:197
+#: inc/labeltranslation.class.php:204
 msgid "Language"
 msgstr "Язык"
 
@@ -232,15 +232,15 @@ msgstr "Расширенный текст"
 msgid "Run \"%s\" to fix database inconsistencies."
 msgstr "Запустите \"%s\" для устранения несоответствий базы данных."
 
-#: inc/container.class.php:1548
+#: inc/container.class.php:1550
 msgid "Some URL fields contains invalid links"
 msgstr "Некоторый URL полей содержат недействительные ссылки"
 
-#: inc/container.class.php:1538
+#: inc/container.class.php:1540
 msgid "Some mandatory fields are empty"
 msgstr "Некоторые обязательные поля пусты"
 
-#: inc/container.class.php:1543
+#: inc/container.class.php:1545
 msgid "Some numeric fields contains non numeric values"
 msgstr "Некоторые числовые поля содержат не только цифры"
 
@@ -248,7 +248,7 @@ msgstr "Некоторые числовые поля содержат не то�
 msgid "Status overrides"
 msgstr "Переопределение статуса"
 
-#: inc/container.class.php:883
+#: inc/container.class.php:886
 msgid "Tab"
 msgstr "Вкладка"
 
@@ -298,34 +298,34 @@ msgstr "Да/Нет"
 msgid "You cannot add same field 'dropdown' on same bloc"
 msgstr "Вы не можете добавить одно и то же поле \"выпадающий список\" в один и тот же блок"
 
-#: inc/container.class.php:580
+#: inc/container.class.php:583
 msgid ""
 "You cannot add several blocks with type 'Insertion in the form of a specific"
 " tab' on same object tab"
 msgstr "Вы не можете добавить несколько блоков с типом 'Вставить в виде определенной вкладки'  в один и тот же объект"
 
-#: inc/container.class.php:564
+#: inc/container.class.php:567
 msgid ""
 "You cannot add several blocks with type 'Insertion in the form' on same "
 "object"
 msgstr "Вы не можете добавить несколько блоков с типом 'Вставить в виде'  в один и тот же объект"
 
-#: inc/container.class.php:612
+#: inc/container.class.php:615
 msgid "You cannot add several blocs with identical name on same object"
 msgstr "Вы не можете добавить несколько блоков с одинаковыми названиями на один и тот же объект"
 
-#: inc/containerdisplaycondition.class.php:493
-#: inc/containerdisplaycondition.class.php:509
+#: inc/containerdisplaycondition.class.php:500
+#: inc/containerdisplaycondition.class.php:516
 msgid "You must specify an item type, search option and condition."
 msgstr "Необходимо указать тип элемента, вариант поиска и условие."
 
-#: inc/containerdisplaycondition.class.php:104
-#: inc/containerdisplaycondition.class.php:138
+#: inc/containerdisplaycondition.class.php:105
+#: inc/containerdisplaycondition.class.php:139
 msgid "not under"
 msgstr "не под"
 
-#: inc/containerdisplaycondition.class.php:110
-#: inc/containerdisplaycondition.class.php:132
+#: inc/containerdisplaycondition.class.php:111
+#: inc/containerdisplaycondition.class.php:133
 msgid "regular expression matches"
 msgstr "соответствует регулярному выражению"
 
@@ -333,7 +333,7 @@ msgstr "соответствует регулярному выражению"
 msgid "show"
 msgstr "показать"
 
-#: inc/containerdisplaycondition.class.php:103
-#: inc/containerdisplaycondition.class.php:135
+#: inc/containerdisplaycondition.class.php:104
+#: inc/containerdisplaycondition.class.php:136
 msgid "under"
 msgstr "под"

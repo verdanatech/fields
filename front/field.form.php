@@ -34,7 +34,7 @@ if (empty($_GET['id'])) {
     $_GET['id'] = '';
 }
 
-Session::checkRight('entity', READ);
+Session::checkRight('config', READ);
 
 $field = new PluginFieldsField();
 
@@ -48,13 +48,13 @@ if (isset($_POST['add'])) {
     Html::back();
 } elseif (isset($_REQUEST['purge'])) {
     $field->check($_REQUEST['id'], PURGE);
-    $field->delete($_REQUEST, 1);
+    $field->delete($_REQUEST, true);
     $field->redirectToList();
 } elseif (isset($_POST['update'])) {
     $field->check($_POST['id'], UPDATE);
     $field->update($_POST);
     Html::back();
-} elseif (isset($_GET['id'])) {
+} else {
     $field->check($_GET['id'], READ);
 
     Html::header(PluginFieldsField::getTypeName(1), $_SERVER['PHP_SELF']);

@@ -30,6 +30,7 @@
 
 use Glpi\Application\View\TemplateRenderer;
 use Glpi\Toolbox\Sanitizer;
+use GlpiPlugin\Scim\Controller\Common;
 
 class PluginFieldsContainerDisplayCondition extends CommonDBChild
 {
@@ -76,7 +77,7 @@ class PluginFieldsContainerDisplayCondition extends CommonDBChild
                   PRIMARY KEY                         (`id`),
                   KEY `plugin_fields_containers_id_itemtype`       (`plugin_fields_containers_id`, `itemtype`)
                ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC;";
-            $DB->query($query) or die($DB->error());
+            $DB->doQuery($query) or die($DB->error());
         }
 
         return true;
@@ -144,7 +145,7 @@ class PluginFieldsContainerDisplayCondition extends CommonDBChild
     {
         /** @var DBmysql $DB */
         global $DB;
-        $DB->query('DROP TABLE IF EXISTS `' . self::getTable() . '`');
+        $DB->doQuery('DROP TABLE IF EXISTS `' . self::getTable() . '`');
 
         return true;
     }
@@ -156,6 +157,9 @@ class PluginFieldsContainerDisplayCondition extends CommonDBChild
 
     public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0)
     {
+        if (!($item instanceof CommonDBTM)) {
+            return '';
+        }
         return self::createTabEntry(
             self::getTypeName(Session::getPluralNumber()),
             countElementsInTable(self::getTable(), ['plugin_fields_containers_id' => $item->getID()]),
@@ -381,11 +385,11 @@ class PluginFieldsContainerDisplayCondition extends CommonDBChild
         foreach ($array as $subKey => $subArray) {
             if (
                 isset($subArray['table']) && in_array($subArray['table'], $allowed_table)
-                && (isset($subArray['datatype']) && in_array($subArray['datatype'], $allowed_datatype))
-                && !isset($subArray['nosearch']) //Exclude SO with no search
-                && !isset($subArray['usehaving']) //Exclude count SO ex: Ticket -> Number of sons tickets
-                && !isset($subArray['forcegroupby']) //Exclude 1-n relation ex: Ticket_User
-                && !isset($subArray['computation']) //Exclude SO with computation Ex : Ticket -> Time to own exceeded
+                                          && (isset($subArray['datatype']) && in_array($subArray['datatype'], $allowed_datatype))
+                                          && !isset($subArray['nosearch']) //Exclude SO with no search
+                                          && !isset($subArray['usehaving']) //Exclude count SO ex: Ticket -> Number of sons tickets
+                                          && !isset($subArray['forcegroupby']) //Exclude 1-n relation ex: Ticket_User
+                                          && !isset($subArray['computation']) //Exclude SO with computation Ex : Ticket -> Time to own exceeded
             ) {
                 $allowed_so[$subKey] = $subArray['name'];
             }
@@ -479,8 +483,10 @@ class PluginFieldsContainerDisplayCondition extends CommonDBChild
     public static function checkRegex($regex)
     {
         // Avoid php notice when validating the regular expression
-        set_error_handler(function ($errno, $errstr, $errfile, $errline) {});
-        $isValid = !(preg_match($regex, null) === false);
+        set_error_handler(function ($errno, $errstr, $errfile, $errline) {
+            return true;
+        });
+        $isValid = !(preg_match($regex, '') === false);
         restore_error_handler();
 
         return $isValid;
@@ -520,6 +526,9 @@ class PluginFieldsContainerDisplayCondition extends CommonDBChild
 
     public static function showForTabContainer(CommonGLPI $item, $options = [])
     {
+        if (!$item instanceof CommonDBTM) {
+            return;
+        }
         $displayCondition_id = $options['displaycondition_id'] ?? 0;
         $display_condition   = null;
 

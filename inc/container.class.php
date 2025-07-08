@@ -96,7 +96,7 @@ class PluginFieldsContainer extends CommonDBTM
                   PRIMARY KEY    (`id`),
                   KEY            `entities_id`  (`entities_id`)
                ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC;";
-            $DB->query($query) or die($DB->error());
+            $DB->doQuery($query) or die($DB->error());
         }
 
         // multiple itemtype for one container
@@ -253,7 +253,7 @@ class PluginFieldsContainer extends CommonDBTM
                 $compcontainer->getFromDB($comptab);
 
                 $fields = new PluginFieldsField();
-                $fields = $fields->find(['plugin_fields_containers_id' => $ostab]);
+                $fieldsdata = $fields->find(['plugin_fields_containers_id' => $ostab]);
 
                 $classname = self::getClassname(Computer::getType(), $oscontainer->fields['name']);
                 $osdata    = new $classname();
@@ -262,7 +262,7 @@ class PluginFieldsContainer extends CommonDBTM
 
                 $fieldnames = [];
                 //add fields to compcontainer
-                foreach ($fields as $field) {
+                foreach ($fieldsdata as $field) {
                     $newname    = $field['name'];
                     $compfields = $fields->find(['plugin_fields_containers_id' => $comptab, 'name' => $newname]);
                     if ($compfields) {
@@ -309,7 +309,7 @@ class PluginFieldsContainer extends CommonDBTM
                 }
 
                 //drop old table
-                $DB->query('DROP TABLE ' . $osdata::getTable());
+                $DB->doQuery('DROP TABLE ' . $osdata::getTable());
             } else {
                 $DB->update(
                     'glpi_plugin_fields_containers',
@@ -372,7 +372,7 @@ class PluginFieldsContainer extends CommonDBTM
         }
 
         //drop global container table
-        $DB->query('DROP TABLE IF EXISTS `' . self::getTable() . '`');
+        $DB->doQuery('DROP TABLE IF EXISTS `' . self::getTable() . '`');
 
         //delete display preferences for this item
         $pref = new DisplayPreference();
@@ -492,11 +492,14 @@ class PluginFieldsContainer extends CommonDBTM
                         continue;
                     }
                     $name_type = getItemForItemtype($type);
-                    $obj .= $name_type->getTypeName(2);
-                    if ($count > $i) {
-                        $obj .= ', ';
+
+                    if ($name_type !== false) {
+                        $obj .= $name_type->getTypeName(2);
+                        if ($count > $i) {
+                            $obj .= ', ';
+                        }
+                        $i++;
                     }
-                    $i++;
                 }
 
                 return $obj;
@@ -617,9 +620,7 @@ class PluginFieldsContainer extends CommonDBTM
             }
         }
 
-        $input['itemtypes'] = isset($input['itemtypes'])
-            ? Sanitizer::dbEscape(json_encode($input['itemtypes']))
-            : null;
+        $input['itemtypes'] = Sanitizer::dbEscape(json_encode($input['itemtypes']));
 
         return $input;
     }
@@ -739,7 +740,7 @@ class PluginFieldsContainer extends CommonDBTM
             } else {
                 //class does not exists; try to remove any existing table
                 $tablename = getTableForItemType($classname);
-                $DB->query("DROP TABLE IF EXISTS `$tablename`");
+                $DB->doQuery("DROP TABLE IF EXISTS `$tablename`");
             }
 
             //clean session
@@ -856,11 +857,13 @@ HTML;
                 }
 
                 $name_type = getItemForItemtype($type);
-                $obj .= $name_type->getTypeName(2);
-                if ($count > $i) {
-                    $obj .= ', ';
+                if ($name_type !== false) {
+                    $obj .= $name_type->getTypeName(2);
+                    if ($count > $i) {
+                        $obj .= ', ';
+                    }
+                    $i++;
                 }
-                $i++;
             }
             echo $obj;
         } else {
@@ -1135,8 +1138,13 @@ HTML;
 
     public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0)
     {
+        if ($withtemplate) {
+            //Do not display tab from template or from item created from template
+            return '';
+        }
+
         $itemtypes = self::getEntries('tab', true);
-        if (isset($itemtypes[$item->getType()])) {
+        if (isset($itemtypes[$item->getType()]) && $item instanceof CommonDBTM) {
             $tabs_entries = [];
             $container    = new self();
             foreach ($itemtypes[$item->getType()] as $tab_name => $tab_label) {
@@ -1169,7 +1177,7 @@ HTML;
     {
         if ($withtemplate) {
             //Do not display tab from template or from item created from template
-            return [];
+            return false;
         }
 
         //retrieve container for current tab
@@ -1293,7 +1301,7 @@ HTML;
      * @param  int    $items_id      item id
      * @param  string $itemtype      item type
      * @param  array  $data          values send by update form
-     * @param  array  $old_values    old values, if empty -> values add
+     * @param  object  $field_obj    field object
      * @return void
      */
     public static function constructHistory(
@@ -1513,10 +1521,8 @@ HTML;
             if (
                 $field['mandatory'] == 1
                 && (
-                    $value    === null
-                    || $value === ''
+                    empty($value)
                     || (($field['type'] === 'dropdown' || preg_match('/^dropdown-.+/i', $field['type'])) && $value == 0)
-                    || ($field['type'] === 'glpi_item' && $value === null)
                     || (in_array($field['type'], ['date', 'datetime']) && $value == 'NULL')
                 )
             ) {
@@ -1611,13 +1617,15 @@ HTML;
         if (array_key_exists('_plugin_fields_data', $item->input)) {
             $data             = $item->input['_plugin_fields_data'];
             $data['items_id'] = $item->getID();
+            $data['entities_id'] = $item->isEntityAssign() ? $item->getEntityID() : 0;
             //update data
             $container = new self();
             if ($container->updateFieldsValues($data, $item->getType(), isset($_REQUEST['massiveaction']))) {
                 return true;
             }
 
-            return $item->input = [];
+            $item->input = [];
+            return $item;
         }
 
         return true;
@@ -1636,6 +1644,7 @@ HTML;
         self::preItem($item);
         if (array_key_exists('_plugin_fields_data', $item->input)) {
             $data = $item->input['_plugin_fields_data'];
+            $data['entities_id'] = $item->isEntityAssign() ? $item->getEntityID() : 0;
             //update data
             $container = new self();
             if (
@@ -1647,7 +1656,7 @@ HTML;
                 return true;
             }
 
-            return $item->input = [];
+            return false;
         }
 
         return true;
@@ -1664,7 +1673,9 @@ HTML;
     public static function preItem(CommonDBTM $item)
     {
         //find container (if not exist, do nothing)
-        if (isset($_REQUEST['c_id'])) {
+        if (isset($item->input['c_id'])) {
+            $c_id = $item->input['c_id'];
+        } elseif (isset($_REQUEST['c_id'])) {
             $c_id = $_REQUEST['c_id'];
         } else {
             $type = 'dom';
@@ -1691,10 +1702,10 @@ HTML;
         if (isset($_SESSION['glpiactiveprofile']['id']) && $_SESSION['glpiactiveprofile']['id'] != null && $c_id > 0) {
             $right = PluginFieldsProfile::getRightOnContainer($_SESSION['glpiactiveprofile']['id'], $c_id);
             if (($right > READ) === false) {
-                return;
+                return false;
             }
         } else {
-            return;
+            return false;
         }
 
 
@@ -1704,9 +1715,7 @@ HTML;
             $entities = getSonsOf(getTableForItemType('Entity'), $loc_c->fields['entities_id']);
         }
 
-        //workaround: when a ticket is created from readdonly profile,
-        //it is not initialized; see https://github.com/glpi-project/glpi/issues/1438
-        if (!isset($item->fields) || count($item->fields) == 0) {
+        if (count($item->fields) === 0) {
             $item->fields = $item->input;
         }
 
@@ -1718,14 +1727,14 @@ HTML;
             if (self::validateValues($data, $item::getType(), isset($_REQUEST['massiveaction'])) === false) {
                 $item->input = [];
 
-                return [];
+                return false;
             }
             $item->input['_plugin_fields_data'] = $data;
 
-            return $data;
+            return true;
         }
 
-        return;
+        return false;
     }
 
     /**
@@ -1957,7 +1966,9 @@ HTML;
                     $opt[$i]['datatype'] = 'text';
                     break;
                 case 'number':
-                    $opt[$i]['datatype'] = 'decimal';
+                    // change datatype to string to get `is` / `is not` operator
+                    $opt[$i]['datatype'] = 'string';
+                    $opt[$i]['searchtype'] = ['contains', 'notcontains', 'equals', 'notequals'];
                     break;
                 case 'date':
                 case 'datetime':

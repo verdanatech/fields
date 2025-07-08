@@ -69,7 +69,7 @@ class PluginFieldsLabelTranslation extends CommonDBChild
                   KEY `language`               (`language`),
                   UNIQUE KEY `unicity` (`itemtype`, `items_id`, `language`)
                ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC;";
-            $DB->query($query) or die($DB->error());
+            $DB->doQuery($query) or die($DB->error());
         }
 
         if ($DB->fieldExists($table, 'plugin_fields_itemtype')) {
@@ -94,7 +94,7 @@ class PluginFieldsLabelTranslation extends CommonDBChild
         /** @var DBmysql $DB */
         global $DB;
 
-        $DB->query('DROP TABLE IF EXISTS `' . self::getTable() . '`');
+        $DB->doQuery('DROP TABLE IF EXISTS `' . self::getTable() . '`');
 
         return true;
     }
@@ -119,6 +119,9 @@ class PluginFieldsLabelTranslation extends CommonDBChild
 
     public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0)
     {
+        if (!($item instanceof CommonDBTM)) {
+            return '';
+        }
         $nb = countElementsInTable(
             self::getTable(),
             [
@@ -132,6 +135,10 @@ class PluginFieldsLabelTranslation extends CommonDBChild
 
     public static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0)
     {
+        if (!($item instanceof CommonDBTM)) {
+            return false;
+        }
+
         self::showTranslations($item);
 
         return true;
@@ -237,7 +244,7 @@ class PluginFieldsLabelTranslation extends CommonDBChild
             echo "<th class='b'>" . __('No translation found') . '</th></tr></table>';
         }
 
-        return true;
+        return;
     }
 
     /**
@@ -290,7 +297,7 @@ class PluginFieldsLabelTranslation extends CommonDBChild
 
         $this->showFormButtons();
 
-        return true;
+        return;
     }
 
     /**

@@ -29,6 +29,7 @@
  */
 
 include('../../../inc/includes.php');
+Session::checkLoginUser();
 
 if (empty($_GET['id'])) {
     $_GET['id'] = '';
@@ -46,7 +47,7 @@ if (isset($_POST['add'])) {
     Html::redirect(PLUGINFIELDS_WEB_DIR . '/front/container.php');
 } elseif (isset($_REQUEST['purge'])) {
     $container->check($_REQUEST['id'], PURGE);
-    $container->delete($_REQUEST, 1);
+    $container->delete($_REQUEST, true);
     Html::redirect(PLUGINFIELDS_WEB_DIR . '/front/container.php');
 } elseif (isset($_POST['update'])) {
     $container->check($_POST['id'], UPDATE);
@@ -59,6 +60,14 @@ if (isset($_POST['add'])) {
     }
     Html::back();
 } else {
+
+    if ((int) $_GET['id'] > 0) {
+        $right = PluginFieldsProfile::getRightOnContainer($_SESSION['glpiactiveprofile']['id'], $_GET['id']);
+        if ($right < READ) {
+            Html::displayRightError("User is missing the " . READ . " ('read') right for container");
+        }
+    }
+
     Html::header(
         __('Additional fields', 'fields'),
         $_SERVER['PHP_SELF'],

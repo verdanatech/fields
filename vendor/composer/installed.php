@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => '__root__',
-        'pretty_version' => '1.21.18',
-        'version' => '1.21.18.0',
-        'reference' => '8aa37f466f5e9d8a0518a83f8ea28efcc7827420',
+        'pretty_version' => '1.21.22',
+        'version' => '1.21.22.0',
+        'reference' => 'fd6c0dc78c3cf78fb6e451485a8665c2c10eeafa',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -11,9 +11,9 @@
     ),
     'versions' => array(
         '__root__' => array(
-            'pretty_version' => '1.21.18',
-            'version' => '1.21.18.0',
-            'reference' => '8aa37f466f5e9d8a0518a83f8ea28efcc7827420',
+            'pretty_version' => '1.21.22',
+            'version' => '1.21.22.0',
+            'reference' => 'fd6c0dc78c3cf78fb6e451485a8665c2c10eeafa',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
@@ -38,9 +38,9 @@
             'dev_requirement' => false,
         ),
         'symfony/yaml' => array(
-            'pretty_version' => 'v5.4.40',
-            'version' => '5.4.40.0',
-            'reference' => '81cad0ceab3d61fe14fe941ff18a230ac9c80f83',
+            'pretty_version' => 'v5.4.45',
+            'version' => '5.4.45.0',
+            'reference' => 'a454d47278cc16a5db371fe73ae66a78a633371e',
             'type' => 'library',
             'install_path' => __DIR__ . '/../symfony/yaml',
             'aliases' => array(),
