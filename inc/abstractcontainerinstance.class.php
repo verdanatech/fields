@@ -31,9 +31,8 @@
 abstract class PluginFieldsAbstractContainerInstance extends CommonDBChild
 {
     public static $itemtype = 'itemtype';
-    public static $items_id = 'items_id';
 
-    public static $mustBeAttached     = false;
+    public static $items_id = 'items_id';
 
     /**
      * This function relies on the static property `static::$plugins_forward_entity`,
@@ -62,19 +61,16 @@ abstract class PluginFieldsAbstractContainerInstance extends CommonDBChild
                     $completeinput,
                 )
             ) {
-                if (
-                    ($itemToGetEntity instanceof CommonDBTM)
-                ) {
-                    if ($itemToGetEntity->isEntityAssign()) {
-                        $input['entities_id']  = $itemToGetEntity->getEntityID();
-                    }
+                if ($itemToGetEntity->isEntityAssign()) {
+                    $input['entities_id']  = $itemToGetEntity->getEntityID();
+                }
 
-                    if ($itemToGetEntity->maybeRecursive()) {
-                        $input['is_recursive'] = intval($itemToGetEntity->isRecursive());
-                    }
+                if ($itemToGetEntity->maybeRecursive()) {
+                    $input['is_recursive'] = intval($itemToGetEntity->isRecursive());
                 }
             }
         }
+
         return $input;
     }
 
@@ -90,15 +86,16 @@ abstract class PluginFieldsAbstractContainerInstance extends CommonDBChild
         if ($field_id !== null && $field_specs->getFromDB($field_id)) {
             $dropdown_matches = [];
             if (
-                preg_match('/^dropdown-(?<class>.+)$/i', $field_specs->fields['type'], $dropdown_matches) === 1
+                preg_match('/^dropdown-(?<class>.+)$/i', (string) $field_specs->fields['type'], $dropdown_matches) === 1
                 && $field_specs->fields['multiple']
             ) {
                 $itemtype = $dropdown_matches['class'];
                 if (!is_a($itemtype, CommonDBTM::class, true)) {
                     return ''; // Itemtype not exists (maybe a deactivated plugin)
                 }
+
                 $display_with = [];
-                if ($itemtype == User::class) {
+                if ($itemtype === User::class) {
                     $display_with = ['realname', 'firstname'];
                 }
 
@@ -128,7 +125,7 @@ abstract class PluginFieldsAbstractContainerInstance extends CommonDBChild
         if ($field_id !== null && $field_specs->getFromDB($field_id)) {
             $dropdown_matches = [];
             if (
-                preg_match('/^dropdown-(?<class>.+)$/i', $field_specs->fields['type'], $dropdown_matches) === 1
+                preg_match('/^dropdown-(?<class>.+)$/i', (string) $field_specs->fields['type'], $dropdown_matches) === 1
                 && $field_specs->fields['multiple']
             ) {
                 $itemtype = $dropdown_matches['class'];
@@ -139,7 +136,8 @@ abstract class PluginFieldsAbstractContainerInstance extends CommonDBChild
                 if (empty($values[$field])) {
                     return ''; // Value not defined
                 }
-                $values = json_decode($values[$field]);
+
+                $values = json_decode((string) $values[$field]);
                 if (!is_array($values)) {
                     return ''; // Invalid value
                 }
@@ -159,9 +157,14 @@ abstract class PluginFieldsAbstractContainerInstance extends CommonDBChild
             ) {
                 $itemtype = PluginFieldsDropdown::getClassname($field_specs->fields['name']);
                 if (empty($values[$field])) {
-                    return ''; // Value not defined
+                    if (!empty($field_specs->fields["default_value"])) {
+                        $values[$field] = $field_specs->fields['default_value'];
+                    } else {
+                        return ''; // Value not defined
+                    }
                 }
-                $values = json_decode($values[$field]);
+
+                $values = json_decode((string) $values[$field]);
                 if (!is_array($values)) {
                     return ''; // Invalid value
                 }
@@ -174,5 +177,29 @@ abstract class PluginFieldsAbstractContainerInstance extends CommonDBChild
         }
 
         return parent::getSpecificValueToDisplay($field, $values, $options);
+    }
+
+    public static function addField($fieldname, $type, array $options = [])
+    {
+        $migration = new PluginFieldsMigration('0');
+
+        $sql_fields = PluginFieldsMigration::getSQLFields($fieldname, $type, $options);
+        foreach ($sql_fields as $sql_field_name => $sql_field_type) {
+            $migration->addField(self::getTable(), $sql_field_name, $sql_field_type);
+        }
+
+        $migration->migrationOneTable(self::getTable());
+    }
+
+    public static function removeField($fieldname, $type)
+    {
+        $migration = new PluginFieldsMigration('0');
+
+        $sql_fields = PluginFieldsMigration::getSQLFields($fieldname, $type);
+        foreach (array_keys($sql_fields) as $sql_field_name) {
+            $migration->dropField(self::getTable(), $sql_field_name);
+        }
+
+        $migration->migrationOneTable(self::getTable());
     }
 }

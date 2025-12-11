@@ -28,7 +28,6 @@
  * -------------------------------------------------------------------------
  */
 
-include('../../../inc/includes.php');
 Session::checkLoginUser();
 
 if (isset($_GET['action'])) {
@@ -43,6 +42,5 @@ if (isset($_GET['action'])) {
         $status_override->showForm($_GET['id'], $_GET);
     }
 } else {
-    http_response_code(400);
-    die();
+    throw new RuntimeException('Invalid request', 400);
 }

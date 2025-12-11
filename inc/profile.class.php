@@ -28,13 +28,18 @@
  * -------------------------------------------------------------------------
  */
 
+use Glpi\Features\Clonable;
+
 class PluginFieldsProfile extends CommonDBRelation
 {
-    use Glpi\Features\Clonable;
+    use Clonable;
 
     public static $itemtype_1 = PluginFieldsContainer::class;
+
     public static $items_id_1 = 'plugin_fields_containers_id';
+
     public static $itemtype_2 = Profile::class;
+
     public static $items_id_2 = 'profiles_id';
 
     /**
@@ -59,7 +64,7 @@ class PluginFieldsProfile extends CommonDBRelation
         if (!$DB->tableExists($table)) {
             $migration->displayMessage(sprintf(__('Installing %s'), $table));
 
-            $query = "CREATE TABLE IF NOT EXISTS `$table` (
+            $query = "CREATE TABLE IF NOT EXISTS `{$table}` (
                   `id`                                INT {$default_key_sign} NOT NULL auto_increment,
                   `profiles_id`                       INT {$default_key_sign} NOT NULL DEFAULT '0',
                   `plugin_fields_containers_id`       INT {$default_key_sign} NOT NULL DEFAULT '0',
@@ -68,7 +73,9 @@ class PluginFieldsProfile extends CommonDBRelation
                   KEY `profiles_id`                   (`profiles_id`),
                   KEY `plugin_fields_containers_id`   (`plugin_fields_containers_id`)
                ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC;";
-            $DB->doQuery($query) or die($DB->error());
+            if (!$DB->doQuery($query)) {
+                throw new RuntimeException('Error creating plugin_fields_profiles table: ' . $DB->error());
+            }
         }
 
         return true;
@@ -86,7 +93,12 @@ class PluginFieldsProfile extends CommonDBRelation
 
     public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0)
     {
-        return self::createTabEntry(_n('Profile', 'Profiles', 2));
+        return self::createTabEntry(
+            _n('Profile', 'Profiles', 2),
+            0,
+            null,
+            'ti ti-user-check',
+        );
     }
 
     public static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0)
@@ -123,6 +135,7 @@ class PluginFieldsProfile extends CommonDBRelation
             echo '</td>';
             echo '<tr>';
         }
+
         echo '<ul>';
         echo "<tr><td class='tab_bg_2 center' colspan='2'>";
         echo "<input type='hidden' name='plugin_fields_containers_id' value='" . $item->fields['id'] . "' />";
