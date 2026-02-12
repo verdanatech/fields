@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => '__root__',
-        'pretty_version' => '1.21.22',
-        'version' => '1.21.22.0',
-        'reference' => 'fd6c0dc78c3cf78fb6e451485a8665c2c10eeafa',
+        'pretty_version' => '1.21.27',
+        'version' => '1.21.27.0',
+        'reference' => '4f69d3b7f50be48ad234564f62395a82d18651ce',
         'type' => 'library',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -11,9 +11,9 @@
     ),
     'versions' => array(
         '__root__' => array(
-            'pretty_version' => '1.21.22',
-            'version' => '1.21.22.0',
-            'reference' => 'fd6c0dc78c3cf78fb6e451485a8665c2c10eeafa',
+            'pretty_version' => '1.21.27',
+            'version' => '1.21.27.0',
+            'reference' => '4f69d3b7f50be48ad234564f62395a82d18651ce',
             'type' => 'library',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
@@ -29,8 +29,8 @@
             'dev_requirement' => false,
         ),
         'symfony/polyfill-ctype' => array(
-            'pretty_version' => 'v1.31.0',
-            'version' => '1.31.0.0',
+            'pretty_version' => 'v1.33.0',
+            'version' => '1.33.0.0',
             'reference' => 'a3cc8b044a6ea513310cbd48ef7333b384945638',
             'type' => 'library',
             'install_path' => __DIR__ . '/../symfony/polyfill-ctype',

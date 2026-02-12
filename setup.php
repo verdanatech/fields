@@ -28,7 +28,7 @@
  * -------------------------------------------------------------------------
  */
 
-define('PLUGIN_FIELDS_VERSION', '1.21.22');
+define('PLUGIN_FIELDS_VERSION', '1.21.27');
 
 // Minimal GLPI version, inclusive
 define('PLUGIN_FIELDS_MIN_GLPI', '10.0.11');
@@ -85,6 +85,8 @@ function plugin_init_fields()
     include_once(PLUGINFIELDS_DIR . '/vendor/autoload.php');
     $pluginfields_autoloader = new PluginFieldsAutoloader([PLUGINFIELDS_CLASS_PATH]);
     $pluginfields_autoloader->register();
+
+    Plugin::load('genericobject', true);
 
     if ((Session::getLoginUserID() || isCommandLine()) && Plugin::isPluginActive('fields')) {
         // Init hook about itemtype(s) for plugin fields

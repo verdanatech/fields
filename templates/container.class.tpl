@@ -2,7 +2,7 @@
 
 class %%CLASSNAME%% extends PluginFieldsAbstractContainerInstance
 {
-   static $rightname = '%%ITEMTYPE_RIGHT%%';
+   static $rightname = %%ITEMTYPE_RIGHT%%;
 
    static function install() {
       global $DB;
@@ -20,8 +20,8 @@ class %%CLASSNAME%% extends PluginFieldsAbstractContainerInstance
          $query = "CREATE TABLE IF NOT EXISTS `$table` (
                   `id`                               INT          {$default_key_sign} NOT NULL auto_increment,
                   `items_id`                         INT          {$default_key_sign} NOT NULL,
-                  `itemtype`                         VARCHAR(255) DEFAULT '%%ITEMTYPE%%',
-                  `plugin_fields_containers_id`      INT          {$default_key_sign} NOT NULL DEFAULT '%%CONTAINER%%',
+                  `itemtype`                         VARCHAR(255) DEFAULT " . var_export(%%ITEMTYPE%%, true) . ",
+                  `plugin_fields_containers_id`      INT          {$default_key_sign} NOT NULL DEFAULT " . var_export(%%CONTAINER%%, true) . ",
                   PRIMARY KEY                        (`id`),
                   UNIQUE INDEX `itemtype_item_container`
                      (`itemtype`, `items_id`, `plugin_fields_containers_id`)
@@ -51,7 +51,7 @@ class %%CLASSNAME%% extends PluginFieldsAbstractContainerInstance
       * This block ensures that the 'entities_id' field is created and populated if it
       * associated item type requires entity assignment
       */
-      if (getItemForItemtype("%%ITEMTYPE%%")->isEntityAssign() && !$DB->fieldExists($table, 'entities_id')) {
+      if (getItemForItemtype(%%ITEMTYPE%%::class)->isEntityAssign() && !$DB->fieldExists($table, 'entities_id')) {
          $migration->addField($table, 'entities_id', 'fkey', ['after' => 'plugin_fields_containers_id']);
          $migration->addKey($table, 'entities_id');
          $migration->executeMigration();
@@ -107,7 +107,7 @@ class %%CLASSNAME%% extends PluginFieldsAbstractContainerInstance
       * associated item type requires recursive assignment
       */
       if (
-         getItemForItemtype("%%ITEMTYPE%%")->maybeRecursive()
+         getItemForItemtype(%%ITEMTYPE%%::class)->maybeRecursive()
          && !$DB->fieldExists($table, 'is_recursive')
          && $DB->fieldExists($table, 'entities_id')) {
          $migration->addField($table, 'is_recursive', 'bool', ['after'  => 'entities_id']);

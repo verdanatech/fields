@@ -249,7 +249,7 @@ class PluginFieldsField extends CommonDBChild
         $input['name'] = $this->prepareName($input);
 
         if ($input['multiple'] ?? false) {
-            $input['default_value'] = json_encode($input['default_value'] ?? []);
+            $input['default_value'] = json_encode($input['default_value'] ?: []);
         }
 
         //reject adding when field name is too long for mysql
@@ -272,9 +272,9 @@ class PluginFieldsField extends CommonDBChild
                 ],
             );
 
-            //reject adding for same dropdown on same bloc
+            //reject adding for same dropdown on same block
             if (!empty($found)) {
-                Session::AddMessageAfterRedirect(__("You cannot add same field 'dropdown' on same bloc", 'fields'), false, ERROR);
+                Session::AddMessageAfterRedirect(__("You cannot add same field 'dropdown' on same block", 'fields'), false, ERROR);
 
                 return false;
             }
@@ -942,6 +942,7 @@ class PluginFieldsField extends CommonDBChild
             strpos($current_url, '.form.php')            === false
             && strpos($current_url, '.injector.php')     === false
             && strpos($current_url, '.public.php')       === false
+            && strpos($current_url, 'ajax/planning')       === false
             && strpos($current_url, 'ajax/timeline.php') === false // ITILSolution load from timeline
         ) {
             return;

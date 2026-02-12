@@ -654,40 +654,75 @@ class PluginFieldsContainer extends CommonDBTM
 
     public static function generateTemplate($fields)
     {
-        $itemtypes = strlen($fields['itemtypes']) > 0
-            ? json_decode($fields['itemtypes'], true)
-            : [];
+        if (!isset($fields['itemtypes'], $fields['name'], $fields['id'], $fields['label'])) {
+            return false;
+        }
+
+        $itemtypes = [];
+        if (strlen((string) $fields['itemtypes']) > 0) {
+            $decoded = PluginFieldsToolbox::decodeJSONItemtypes($fields['itemtypes'], true);
+            if (is_array($decoded)) {
+                $itemtypes = $decoded;
+            }
+        }
+
+        $fields['name'] = PluginFieldsToolbox::sanitizeLabel((string) $fields['name']);
+        $fields['id'] = (int) PluginFieldsToolbox::sanitizeLabel((string) $fields['id']);
+        $fields['label'] = PluginFieldsToolbox::sanitizeLabel((string) $fields['label']);
         foreach ($itemtypes as $itemtype) {
             // prevent usage of plugin class if not loaded
             if (!class_exists($itemtype)) {
                 continue;
             }
 
-            $sysname   = self::getSystemName($itemtype, $fields['name']);
+            $sysname = self::getSystemName($itemtype, $fields['name']);
             $classname = self::getClassname($itemtype, $fields['name']);
 
-            $template_class = file_get_contents(PLUGINFIELDS_DIR . '/templates/container.class.tpl');
-            $template_class = str_replace('%%CLASSNAME%%', $classname, $template_class);
-            $template_class = str_replace('%%ITEMTYPE%%', $itemtype, $template_class);
-            $template_class = str_replace('%%CONTAINER%%', $fields['id'], $template_class);
-            $template_class = str_replace('%%ITEMTYPE_RIGHT%%', $itemtype::$rightname, $template_class);
-            $class_filename = $sysname . '.class.php';
-            if (file_put_contents(PLUGINFIELDS_CLASS_PATH . "/$class_filename", $template_class) === false) {
-                Toolbox::logDebug("Error : class file creation - $class_filename");
+            if ($sysname === '' || $sysname === '0' || ($classname === '' || $classname === '0')) {
+                continue;
+            }
 
+            $template_class = file_get_contents(PLUGINFIELDS_DIR . '/templates/container.class.tpl');
+            $template_class = str_replace(
+                ['%%CLASSNAME%%', '%%ITEMTYPE%%', '%%CONTAINER%%', '%%ITEMTYPE_RIGHT%%'],
+                [
+                    $classname,
+                    str_replace('\'', '', var_export($itemtype, true)),
+                    var_export($fields['id'], true),
+                    var_export($itemtype::$rightname, true),
+                ],
+                $template_class,
+            );
+
+            $class_filename = basename($sysname) . '.class.php';
+            $filepath = rtrim(PLUGINFIELDS_CLASS_PATH, '/') . '/' . $class_filename;
+            if (file_put_contents($filepath, $template_class) === false) {
+                Toolbox::logInFile('php-errors', 'Error : class file creation - ' . $class_filename);
                 return false;
             }
 
             // Generate Datainjection files
             $template_class = file_get_contents(PLUGINFIELDS_DIR . '/templates/injection.class.tpl');
-            $template_class = str_replace('%%CLASSNAME%%', $classname, $template_class);
-            $template_class = str_replace('%%ITEMTYPE%%', $itemtype, $template_class);
-            $template_class = str_replace('%%CONTAINER_ID%%', $fields['id'], $template_class);
-            $template_class = str_replace('%%CONTAINER_NAME%%', $fields['label'], $template_class);
-            $class_filename = $sysname . 'injection.class.php';
-            if (file_put_contents(PLUGINFIELDS_CLASS_PATH . "/$class_filename", $template_class) === false) {
-                Toolbox::logDebug("Error : datainjection class file creation - $class_filename");
+            if ($template_class === false) {
+                Toolbox::logInFile('php-errors', 'Error: unable to load injection.class.tpl template.');
+                return false;
+            }
 
+            $template_class = str_replace(
+                ['%%CLASSNAME%%', '%%ITEMTYPE%%', '%%CONTAINER_ID%%', '%%CONTAINER_NAME%%'],
+                [
+                    $classname,
+                    str_replace('\'', '', var_export($itemtype, true)),
+                    var_export($fields['id'], true),
+                    var_export($fields['label'], true),
+                ],
+                $template_class,
+            );
+
+            $class_filename = basename($sysname) . 'injection.class.php';
+            $filepath = rtrim(PLUGINFIELDS_CLASS_PATH, '/') . '/' . $class_filename;
+            if (file_put_contents($filepath, $template_class) === false) {
+                Toolbox::logInFile('php-errors', 'Error: datainjection class file creation - ' . $class_filename);
                 return false;
             }
         }
@@ -767,7 +802,7 @@ class PluginFieldsContainer extends CommonDBTM
         foreach ($founded_containers as $container) {
             $itemtypes = json_decode($container['itemtypes']);
             if (in_array($itemtype, $itemtypes)) {
-                $classname = 'PluginFields' . $itemtype . getSingular($container['name']);
+                $classname = self::getClassname($itemtype, $container['name']);
                 $fields    = new $classname();
                 $fields->deleteByCriteria(['items_id' => $item->fields['id']], true);
             }
@@ -1211,6 +1246,17 @@ HTML;
             return false;
         }
 
+        //Get object classname
+        $container_obj = new PluginFieldsContainer();
+        $container_obj->getFromDB($data['plugin_fields_containers_id']);
+
+        $items_id  = $data['items_id'];
+        $classname = self::getClassname($itemtype, $container_obj->fields['name']);
+
+        $obj = new $classname();
+
+        $exist = $obj->getFromDBByCrit(['items_id' => $items_id]);
+
         // Convert "multiple" values into a JSON string
         $multiple_fields_iterator = $DB->request([
             'FROM'  => PluginFieldsField::getTable(),
@@ -1226,20 +1272,21 @@ HTML;
                 $field_name = 'plugin_fields_' . $field_data['name'] . 'dropdowns_id';
             }
             if (array_key_exists($field_name, $data)) {
-                $data[$field_name] = json_encode($data[$field_name]);
+                if (isset($data['multiple_dropdown_action']) && $data['multiple_dropdown_action'] === 'append' && $exist) {
+                    // Add new values to existing ones
+                    $existing_values = json_decode($obj->fields[$field_name] ?? '[]', true);
+                    $new_values      = is_array($data[$field_name]) ? $data[$field_name] : [$data[$field_name]];
+                    $data[$field_name] = json_encode(array_values(array_unique(array_merge($existing_values, $new_values))));
+
+                } else {
+                    $data[$field_name] = json_encode($data[$field_name]);
+                }
             } elseif (array_key_exists('_' . $field_name . '_defined', $data)) {
                 $data[$field_name] = json_encode([]);
             }
         }
 
-        $container_obj = new PluginFieldsContainer();
-        $container_obj->getFromDB($data['plugin_fields_containers_id']);
-
-        $items_id  = $data['items_id'];
-        $classname = self::getClassname($itemtype, $container_obj->fields['name']);
-
-        $obj = new $classname();
-        if ($obj->getFromDBByCrit(['items_id' => $items_id]) === false) {
+        if ($exist === false) {
             // add fields data
             $obj->add($data);
         } else {
@@ -1393,7 +1440,7 @@ HTML;
             //for all change find searchoption
             foreach ($updates as $key => $changes) {
                 foreach ($searchoptions as $id_search_option => $searchoption) {
-                    if ($searchoption['linkfield'] == $key) {
+                    if ($searchoption['field'] == $key || $searchoption['linkfield'] == $key) {
                         $changes[0] = $id_search_option;
 
                         if ($searchoption['datatype'] === 'dropdown') {
@@ -1729,6 +1776,7 @@ HTML;
 
                 return false;
             }
+
             $item->input['_plugin_fields_data'] = $data;
 
             return true;
@@ -1819,6 +1867,7 @@ HTML;
                 // ex my_dom[]
                 //in these conditions, the input is never sent by the browser
                 if ($field['multiple']) {
+                    $data['multiple_dropdown_action'] = $_POST['multiple_dropdown_action'] ?? 'assign';
                     //handle multi dropdown field
                     if ($field['type'] == 'dropdown') {
                         $multiple_key         = sprintf('plugin_fields_%sdropdowns_id', $field['name']);
@@ -1833,6 +1882,11 @@ HTML;
                         ) { //multi dropdown is empty or has been emptied
                             $data[$multiple_key] = [];
                             $has_fields          = true;
+                        } elseif (isset($_REQUEST['massiveaction'])) { // called from massiveaction
+                            if (isset($_POST[$multiple_key])) {
+                                $data[$multiple_key] = $_POST[$multiple_key];
+                                $has_fields          = true;
+                            }
                         }
                     }
 
@@ -1954,6 +2008,10 @@ HTML;
 
             $opt[$i]['pfields_type']      = $data['type'];
             $opt[$i]['pfields_fields_id'] = $data['field_id'];
+
+            if ($data['type'] === 'dropdown') {
+                $opt[$i]['is_multiple'] = $data['multiple'];
+            }
 
             if ($data['is_readonly']) {
                 $opt[$i]['massiveaction'] = false;
