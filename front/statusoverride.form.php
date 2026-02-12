@@ -28,7 +28,6 @@
  * -------------------------------------------------------------------------
  */
 
-include('../../../inc/includes.php');
 Session::checkRight('config', READ);
 
 $status_override = new PluginFieldsStatusOverride();
@@ -47,4 +46,5 @@ if (isset($_POST['add'])) {
     ]);
     Html::back();
 }
+
 Html::back();

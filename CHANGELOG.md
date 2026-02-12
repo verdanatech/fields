@@ -5,22 +5,77 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [1.21.27] - 2026-02-12
+## [1.23.3] - 2026-02-12
 
-- Fix template generation error on update
+### Added
 
-## [1.21.26] - 2026-02-12
-
-### Fixed
-
-- Fix the value of `id_search_option` in the log table when updating a dropdown field
-
-## [1.21.25] - 2025-11-20
+- Add compatibility with GLPI `CustomAsset`
 
 ### Fixed
 
+- Fix migration error caused by unknown itemtype in containers
+- Fix empty default value in multiple dropdown fields
+
+## [1.23.2] - 2025-12-22
+
+- Fix prevent failure when attempting to delete an actor
+- Fix form `path` for `tab` `container`
+- Fix error during Forms migration when block is not on root entity
+
+## [1.23.1] - 2025-11-20
+
+- Fix `add` operations when a linked object already exists before the plugin container fields are created.
+- Fix left side menu url (with `DIR_MARKETPLACE`)
 - Fix default value format for multiple dropdown (GLPIObject)
+- Fix bad SQL query for `GenericObject`
+- Fixed a bug that prevented the creation of additional field data for objects
+- Hide config menu if user does not have read permission
+
+## [1.23.0] - 2025-11-05
+
+### Added
+
+- Implement `Field` question type for new GLPI forms
+- Bind the answers to the `Field` question type to the corresponding additional fields
+- Update dropdowns layout/style for “GLPI Item” fields
+
+### Fixed
+
+- Align the fields of the plugin with the user form
+- Fix bad SQL query for `GenericObject`
+
+## [1.22.2] - 2025-10-24
+
+### Fixed
+
+- Fix `GenericObject` Model and Type migration
+- Fix `json_decode` using class with namespace
+- Fix drag and drop
 - Increased the maximum length of the language column to support longer locale codes
+- Fix left side menu url
+- Fix purge
+
+## [1.22.1] - 2025-10-10
+
+### Fixed
+
+- Fix UI with GLPI 11
+- Fix `tab` container not displayed
+
+## [1.22.0] - 2025-09-30
+
+### Added
+
+- GLPI 11 compatibility
+
+### Fixed
+
+- Fix  `massive action` for adding value to `multiple` dropdown fields
+- Fix for the `COALESCE` part of the `SQL query` for `multiple` dropdowns
+- Fix `search option` for `multiple` dropdown
+- Fix display from Planning view
+- Fix `classname` resolution when multiple `s` at end of container name
+
 
 ## [1.21.24] - 2025-10-10
 
@@ -31,6 +86,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Fix `search option` for `multiple` dropdown
 - Fix display from Planning view
 - Fix `classname` resolution when multiple `s` at end of container name
+
 
 ## [1.21.23] - 2025-08-26
 

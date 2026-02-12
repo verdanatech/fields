@@ -28,7 +28,8 @@
  * -------------------------------------------------------------------------
  */
 
-include('../../../inc/includes.php');
+use Glpi\Exception\Http\AccessDeniedHttpException;
+
 Session::checkLoginUser();
 
 if (empty($_GET['id'])) {
@@ -40,7 +41,7 @@ $container = new PluginFieldsContainer();
 if (isset($_POST['add'])) {
     $container->check(-1, CREATE, $_POST);
     $newID = $container->add($_POST);
-    Html::redirect(PLUGINFIELDS_WEB_DIR . "/front/container.form.php?id=$newID");
+    Html::redirect(PLUGINFIELDS_WEB_DIR . ('/front/container.form.php?id=' . $newID));
 } elseif (isset($_POST['delete'])) {
     $container->check($_POST['id'], DELETE);
     $ok = $container->delete($_POST);
@@ -58,13 +59,14 @@ if (isset($_POST['add'])) {
     if ($right > READ) {
         $container->updateFieldsValues($_REQUEST, $_REQUEST['itemtype'], false);
     }
+
     Html::back();
 } else {
 
     if ((int) $_GET['id'] > 0) {
         $right = PluginFieldsProfile::getRightOnContainer($_SESSION['glpiactiveprofile']['id'], $_GET['id']);
         if ($right < READ) {
-            Html::displayRightError("User is missing the " . READ . " ('read') right for container");
+            throw new AccessDeniedHttpException();
         }
     }
 

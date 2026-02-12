@@ -5,15 +5,15 @@
 # Translators:
 # sai sai, 2019
 # INOUE Daisuke, 2023
-# INOUE Daisuke, 2023-2024
+# INOUE Daisuke, 2023-2025
 # sai sai, 2019
 msgid ""
 msgstr ""
 "Project-Id-Version: GLPI Plugin - Fields\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2025-09-16 01:05+0000\n"
+"POT-Creation-Date: 2026-02-04 01:26+0000\n"
 "PO-Revision-Date: 2015-09-18 09:34+0000\n"
-"Last-Translator: INOUE Daisuke, 2023-2024\n"
+"Last-Translator: INOUE Daisuke, 2023-2025\n"
 "Language-Team: Japanese (Japan) (http://app.transifex.com/teclib/glpi-plugin-plugin-fields/language/ja_JP/)\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -21,18 +21,18 @@ msgstr ""
 "Language: ja_JP\n"
 "Plural-Forms: nplurals=1; plural=0;\n"
 
-#: templates/forms/status_override.html.twig inc/field.class.php:243
-msgid "Field"
-msgstr "フィールド"
-
-#: templates/forms/status_override.html.twig inc/field.class.php:625
-#: inc/field.class.php:805
-msgid "Read only"
-msgstr "読取専用"
-
 #: templates/fields.html.twig
 msgid "show"
 msgstr "表示"
+
+#: templates/forms/status_override.html.twig inc/field.class.php:248
+msgid "Field"
+msgstr "フィールド"
+
+#: templates/forms/status_override.html.twig inc/field.class.php:648
+#: inc/field.class.php:827
+msgid "Read only"
+msgstr "読取専用"
 
 #: templates/status_overrides.html.twig
 msgid "Add new status override"
@@ -51,195 +51,47 @@ msgid "Add condition to hide block"
 msgstr "ブロックを非表示にする条件を追加"
 
 #: templates/container_display_conditions.html.twig
-#: inc/containerdisplaycondition.class.php:155
+#: inc/containerdisplaycondition.class.php:157
 msgid "Condition to hide block"
 msgid_plural "Conditions to hide block"
 msgstr[0] "ブロックを非表示にする条件"
 
-#: setup.php:223 front/container.php:35 front/container.form.php:72
-#: inc/menu.class.php:37
+#: templates/destinationfield.html.twig
+msgid "Bind additional fields to the destination"
+msgstr ""
+
+#: setup.php:238 inc/destinationfield.class.php:50 inc/menu.class.php:37
+#: front/container.form.php:74 front/container.php:34
 msgid "Additional fields"
 msgstr "追加フィールド"
 
-#: ajax/field_specific_fields.php:53
-msgid "Allowed values"
-msgstr "利用できる値"
+#: inc/containerdisplaycondition.class.php:106
+#: inc/containerdisplaycondition.class.php:138
+msgid "under"
+msgstr "未満"
 
-#: ajax/field_specific_fields.php:87
-msgid "Multiple dropdown"
-msgstr "複数のドロップダウン"
+#: inc/containerdisplaycondition.class.php:107
+#: inc/containerdisplaycondition.class.php:141
+msgid "not under"
+msgstr "以上"
 
-#: ajax/field_specific_fields.php:90
-msgid "Default value"
-msgstr "既定値"
+#: inc/containerdisplaycondition.class.php:113
+#: inc/containerdisplaycondition.class.php:135
+msgid "regular expression matches"
+msgstr "正規表現での照合"
 
-#: ajax/field_specific_fields.php:121
-msgid "Default value will be configurable once field will be created."
-msgstr "フィールドを作成した後でも、既定値は設定可能です。"
-
-#: hook.php:55 hook.php:59
-msgid "MySQL tables installation"
-msgstr "MySQL テーブルのインストール"
-
-#: hook.php:109
-msgid "The plugin can't be uninstalled when the plugin is disabled"
-msgstr "プラグインが無効だと、プラグインをアンインストールできません"
-
-#: hook.php:122
-msgid "MySQL tables uninstallation"
-msgstr "MySQL テーブルのアンインストール"
-
-#: inc/dropdown.class.php:78
-msgid "Updating generated dropdown files"
-msgstr "生成済みドロップダウン ファイルを更新しています"
+#: inc/containerdisplaycondition.class.php:507
+#: inc/containerdisplaycondition.class.php:523
+msgid "You must specify an item type, search option and condition."
+msgstr "検索設定と状態では、アイテムの型を特定する必要があります。"
 
 #: inc/toolbox.class.php:122
 msgid "Fix fields names"
 msgstr "フィールド名を修正する"
 
-#: inc/toolbox.class.php:322
+#: inc/toolbox.class.php:331
 msgid "Component items"
 msgstr "コンポーネント項目"
-
-#: inc/field.class.php:258 inc/field.class.php:285
-msgid ""
-"Field name is too long for database (digits in name are replaced by "
-"characters, try to remove them)"
-msgstr "データベースに保存するフィールド名が長すぎます（名前の数字は文字に置き換える処理を行います。数字を削除してみてください）"
-
-#: inc/field.class.php:277
-msgid "You cannot add same field 'dropdown' on same block"
-msgstr ""
-
-#: inc/field.class.php:545
-msgid "Fields"
-msgstr "フィールド"
-
-#: inc/field.class.php:608
-msgid "Add a new field"
-msgstr "新しいフィールドを追加"
-
-#: inc/field.class.php:612
-msgid "No field for this block"
-msgstr "このブロック用のフィールドがありません"
-
-#: inc/field.class.php:1336
-msgid "Header"
-msgstr "ヘッダー"
-
-#: inc/field.class.php:1337
-msgid "Text (single line)"
-msgstr "テキスト（単一行）"
-
-#: inc/field.class.php:1338
-msgid "Text (multiples lines)"
-msgstr "テキスト（複数行）"
-
-#: inc/field.class.php:1339
-msgid "Rich Text"
-msgstr "リッチテキスト"
-
-#: inc/field.class.php:1340
-msgid "Number"
-msgstr "数値"
-
-#: inc/field.class.php:1341
-msgid "URL"
-msgstr "URL"
-
-#: inc/field.class.php:1342
-msgid "Dropdown"
-msgstr "ドロップダウン"
-
-#: inc/field.class.php:1343
-msgid "Yes/No"
-msgstr "はい・いいえ"
-
-#: inc/field.class.php:1344
-msgid "Date"
-msgstr "日付"
-
-#: inc/field.class.php:1345
-msgid "Date & time"
-msgstr "日時"
-
-#: inc/field.class.php:1346
-msgid "GLPI item"
-msgstr "GLPI アイテム"
-
-#: inc/container.class.php:52
-msgid "Regenerate container files"
-msgstr "コンテナファイルを再生成"
-
-#: inc/container.class.php:53 inc/container.class.php:791
-msgid "Export to YAML"
-msgstr "YAML 形式でエクスポート"
-
-#: inc/container.class.php:190
-msgid "Regenerate containers files"
-msgstr "コンテナファイルを再生成"
-
-#: inc/container.class.php:211
-msgid "Fix container names"
-msgstr "コンテナ名を修正する"
-
-#: inc/container.class.php:352
-msgid "Updating generated containers files"
-msgstr "生成済みコンテナ ファイルを更新しています"
-
-#: inc/container.class.php:567
-msgid ""
-"You cannot add several blocks with type 'Insertion in the form' on same "
-"object"
-msgstr "「フォームに挿入」型のブロックを、同じオブジェクトに複数配置することはできません"
-
-#: inc/container.class.php:583
-msgid ""
-"You cannot add several blocks with type 'Insertion in the form of a specific"
-" tab' on same object tab"
-msgstr "「フォームの特定のタブに挿入」型のブロックを、1 つのオブジェクトのタブ上に複数配置することはできません"
-
-#: inc/container.class.php:600
-msgid ""
-"Container name is too long for database (digits in name are replaced by "
-"characters, try to remove them)"
-msgstr "データベースに保存するコンテナ名が長すぎます（名前の数字は文字に置き換える処理を行います。数字を削除してみてください）"
-
-#: inc/container.class.php:615
-msgid "You cannot add several blocs with identical name on same object"
-msgstr "1 つのオブジェクトに、同じ名前のブロックを複数配置することはできません"
-
-#: inc/container.class.php:782
-msgid "Block"
-msgstr "ブロック"
-
-#: inc/container.class.php:887
-msgid "Tab"
-msgstr "タブ"
-
-#: inc/container.class.php:1041
-msgid "Add tab"
-msgstr "タブを追加"
-
-#: inc/container.class.php:1042
-msgid "Insertion in the form (before save button)"
-msgstr "フォームに挿入（保存ボタンの前）"
-
-#: inc/container.class.php:1043
-msgid "Insertion in the form of a specific tab (before save button)"
-msgstr "フォームの特定のタブに挿入（保存ボタンの前）"
-
-#: inc/container.class.php:1557
-msgid "Some mandatory fields are empty"
-msgstr "未入力の必須項目があります"
-
-#: inc/container.class.php:1562
-msgid "Some numeric fields contains non numeric values"
-msgstr "非数値が入っている数値フィールドがあります"
-
-#: inc/container.class.php:1567
-msgid "Some URL fields contains invalid links"
-msgstr "不正なリンクを含む URL フィールドがあります"
 
 #: inc/checkdatabasecommand.class.php:42
 msgid "Check database to detect inconsistencies."
@@ -290,18 +142,6 @@ msgstr "-> \"%s.%s\" は削除すべきです。"
 msgid "Run \"%s\" to fix database inconsistencies."
 msgstr "「%s」を実行してデータベースの不整合を修復してください。"
 
-#: inc/labeltranslation.class.php:204
-msgid "Language"
-msgstr "言語"
-
-#: inc/labeltranslation.class.php:205
-msgid "Label"
-msgstr "ラベル"
-
-#: inc/statusoverride.class.php:90
-msgid "Override by status"
-msgstr "状態による上書き"
-
 #: inc/command/regeneratefilescommand.class.php:41
 msgid "Regenerates containers files."
 msgstr "コンテナファイルを再生成します。"
@@ -312,22 +152,147 @@ msgid ""
 "them."
 msgstr "このコマンドでプラグインが生成したすべてのファイルを初期化し、再生成します。"
 
-#: inc/containerdisplaycondition.class.php:104
-#: inc/containerdisplaycondition.class.php:136
-msgid "under"
-msgstr "未満"
+#: inc/labeltranslation.class.php:224
+msgid "Language"
+msgstr "言語"
 
-#: inc/containerdisplaycondition.class.php:105
-#: inc/containerdisplaycondition.class.php:139
-msgid "not under"
-msgstr "以上"
+#: inc/labeltranslation.class.php:225
+msgid "Label"
+msgstr "ラベル"
 
-#: inc/containerdisplaycondition.class.php:111
-#: inc/containerdisplaycondition.class.php:133
-msgid "regular expression matches"
-msgstr "正規表現での照合"
+#: inc/dropdown.class.php:79
+msgid "Updating generated dropdown files"
+msgstr "生成済みドロップダウン ファイルを更新しています"
 
-#: inc/containerdisplaycondition.class.php:500
-#: inc/containerdisplaycondition.class.php:516
-msgid "You must specify an item type, search option and condition."
-msgstr "検索設定と状態では、アイテムの型を特定する必要があります。"
+#: inc/container.class.php:53
+msgid "Regenerate container files"
+msgstr "コンテナファイルを再生成"
+
+#: inc/container.class.php:54 inc/container.class.php:889
+msgid "Export to YAML"
+msgstr "YAML 形式でエクスポート"
+
+#: inc/container.class.php:289
+msgid "Regenerate containers files"
+msgstr "コンテナファイルを再生成"
+
+#: inc/container.class.php:310
+msgid "Fix container names"
+msgstr "コンテナ名を修正する"
+
+#: inc/container.class.php:458
+msgid "Updating generated containers files"
+msgstr "生成済みコンテナ ファイルを更新しています"
+
+#: inc/container.class.php:661
+msgid ""
+"You cannot add several blocks with type 'Insertion in the form' on same "
+"object"
+msgstr "「フォームに挿入」型のブロックを、同じオブジェクトに複数配置することはできません"
+
+#: inc/container.class.php:677
+msgid ""
+"You cannot add several blocks with type 'Insertion in the form of a specific"
+" tab' on same object tab"
+msgstr "「フォームの特定のタブに挿入」型のブロックを、1 つのオブジェクトのタブ上に複数配置することはできません"
+
+#: inc/container.class.php:694
+msgid ""
+"Container name is too long for database (digits in name are replaced by "
+"characters, try to remove them)"
+msgstr "データベースに保存するコンテナ名が長すぎます（名前の数字は文字に置き換える処理を行います。数字を削除してみてください）"
+
+#: inc/container.class.php:709
+msgid "You cannot add several blocs with identical name on same object"
+msgstr "1 つのオブジェクトに、同じ名前のブロックを複数配置することはできません"
+
+#: inc/container.class.php:877
+msgid "Block"
+msgstr "ブロック"
+
+#: inc/container.class.php:990
+msgid "Tab"
+msgstr "タブ"
+
+#: inc/container.class.php:1148
+msgid "Add tab"
+msgstr "タブを追加"
+
+#: inc/container.class.php:1149
+msgid "Insertion in the form (before save button)"
+msgstr "フォームに挿入（保存ボタンの前）"
+
+#: inc/container.class.php:1150
+msgid "Insertion in the form of a specific tab (before save button)"
+msgstr "フォームの特定のタブに挿入（保存ボタンの前）"
+
+#: inc/container.class.php:1681
+msgid "Some mandatory fields are empty"
+msgstr "未入力の必須項目があります"
+
+#: inc/container.class.php:1686
+msgid "Some numeric fields contains non numeric values"
+msgstr "非数値が入っている数値フィールドがあります"
+
+#: inc/container.class.php:1691
+msgid "Some URL fields contains invalid links"
+msgstr "不正なリンクを含む URL フィールドがあります"
+
+#: inc/statusoverride.class.php:93
+msgid "Override by status"
+msgstr "状態による上書き"
+
+#: inc/field.class.php:263 inc/field.class.php:290
+msgid ""
+"Field name is too long for database (digits in name are replaced by "
+"characters, try to remove them)"
+msgstr "データベースに保存するフィールド名が長すぎます（名前の数字は文字に置き換える処理を行います。数字を削除してみてください）"
+
+#: inc/field.class.php:282
+msgid "You cannot add same field 'dropdown' on same block"
+msgstr "同じブロックに同じ「ドロップダウン」のフィールドを追加することはできません"
+
+#: inc/field.class.php:369
+#, php-format
+msgid "The field \"%s\" cannot be deleted because it is used in a form question"
+msgstr "「%s」フィールドはフォームの質問で利用されているため、削除できません。"
+
+#: inc/field.class.php:566
+msgid "Fields"
+msgstr "フィールド"
+
+#: inc/field.class.php:631
+msgid "Add a new field"
+msgstr "新しいフィールドを追加"
+
+#: inc/field.class.php:635
+msgid "No field for this block"
+msgstr "このブロック用のフィールドがありません"
+
+#: hook.php:57 hook.php:61
+msgid "MySQL tables installation"
+msgstr "MySQL テーブルのインストール"
+
+#: hook.php:114
+msgid "The plugin can't be uninstalled when the plugin is disabled"
+msgstr "プラグインが無効だと、プラグインをアンインストールできません"
+
+#: hook.php:127
+msgid "MySQL tables uninstallation"
+msgstr "MySQL テーブルのアンインストール"
+
+#: ajax/field_specific_fields.php:52
+msgid "Allowed values"
+msgstr "利用できる値"
+
+#: ajax/field_specific_fields.php:85
+msgid "Multiple dropdown"
+msgstr "複数のドロップダウン"
+
+#: ajax/field_specific_fields.php:89
+msgid "Default value"
+msgstr "既定値"
+
+#: ajax/field_specific_fields.php:122
+msgid "Default value will be configurable once field will be created."
+msgstr "フィールドを作成した後でも、既定値は設定可能です。"
