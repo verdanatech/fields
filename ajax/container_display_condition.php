@@ -27,6 +27,8 @@
  * @link      https://github.com/pluginsGLPI/fields
  * -------------------------------------------------------------------------
  */
+
+include('../../../inc/includes.php');
 Session::checkLoginUser();
 
 if (isset($_GET['action'])) {
@@ -53,5 +55,6 @@ if (isset($_GET['action'])) {
         }
     }
 } else {
-    throw new RuntimeException('Invalid request', 400);
+    http_response_code(400);
+    die();
 }

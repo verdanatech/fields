@@ -29,22 +29,13 @@
 {% import 'components/form/fields_macros.html.twig' as macros %}
 
 {% set already_wrapped = item is instanceof('CommonITILObject') and container.fields['type'] == 'dom' %}
-{% set dropdown_item = item is instanceof('CommonDropdown') and container.fields['type'] == 'dom' %}
 
-{% if item is instanceof('Glpi\\Form\\Form') %}
-    {% set already_wrapped = true %}
-{% endif %}
-
-{% if not already_wrapped and not dropdown_item%}
-
-{% set class = item.isNewItem() or item is instanceof('User') ? 'col-xxl-12' : 'col-xxl-9' %}
-    <div class="col-12  {{ class }} flex-column">
-        <div class="d-flex flex-row flex-wrap flex-xl-nowrap">
-            <div class="row flex-row align-items-start flex-grow-1">
-                <div class="row flex-row">
-                    {% if item.isNewItem() and item is instanceof('User') %}
-                        <div>
-                    {% endif %}
+{% if not already_wrapped %}
+    <div class="card-body d-flex flex-wrap">
+        <div class="col-12 col-xxl-12 flex-column">
+            <div class="d-flex flex-row flex-wrap flex-xl-nowrap">
+                <div class="row flex-row align-items-start flex-grow-1">
+                    <div class="row flex-row">
 {% endif %}
 
 {% for field in fields %}
@@ -52,61 +43,60 @@
     {% set type     = field['type'] %}
     {% set name     = field['name'] %}
     {% set label    = field['label'] %}
-    {% set value    = item.input[name]|default(field['value']) %}
+    {% set value    = item.input[name] ?: field['value'] %}
     {% set readonly = field['is_readonly'] %}
     {% set rand = random() %}
 
     {% set field_options = field_options|merge({
         'readonly': readonly or not canedit,
         'required': field['mandatory'],
-        'full_width': field_options.full_width ?? already_wrapped,
+        'full_width': already_wrapped
     }) %}
-
-    {% set input_name = field_options.input_name ?? name %}
 
     {% if type == 'header' %}
         {{ macros.largeTitle(label) }}
 
     {% elseif type == 'text' %}
-        {{ macros.textField(input_name, value, label, field_options) }}
+        {{ macros.textField(name, value, label, field_options) }}
 
     {% elseif type == 'number' %}
-        {{ macros.numberField(input_name, value, label, field_options|merge({step: 'any', min: ''})) }}
+        {{ macros.numberField(name, value, label, field_options|merge({step: 'any', min: ''})) }}
 
     {% elseif type == 'url' %}
             {% set ext_link %}
             {% if value|length %}
-                <a target="_blank" href="{{ value }}">
+                <a target="_blank" href="{{ value|verbatim_value }}">
                     <i class="ti ti-external-link"></i>
                     {{ __('show', 'fields') }}
                 </a>
             {% endif %}
             {% endset %}
-            {{ macros.textField(input_name, value, label, field_options|merge({
+            {{ macros.textField(name, value, label, field_options|merge({
                 'type': 'url',
                 'add_field_html': ext_link
             })) }}
 
     {% elseif type == 'textarea' %}
-        {{ macros.textareaField(input_name, value, label, field_options) }}
+        {{ macros.textareaField(name, value, label, field_options) }}
 
     {% elseif type == 'richtext' %}
-        {{ macros.textareaField(input_name, value, label, field_options|merge({
+        {{ macros.textareaField(name, value, label, field_options|merge({
             'enable_richtext': true,
             'field_class': 'col-12',
             'label_class': '',
             'input_class': '',
             'align_label_right': false,
+            'mb': 'm-2'
         })) }}
 
     {% elseif type == 'yesno' %}
-        {{ macros.dropdownYesNo(input_name, value, label, field_options) }}
+        {{ macros.dropdownYesNo(name, value, label, field_options) }}
 
     {% elseif type == 'date' %}
-        {{ macros.dateField(input_name, value, label, field_options) }}
+        {{ macros.dateField(name, value, label, field_options) }}
 
     {% elseif type == 'datetime' %}
-        {{ macros.datetimeField(input_name, value, label, field_options) }}
+        {{ macros.datetimeField(name, value, label, field_options) }}
 
     {% elseif type == 'dropdown' %}
         {% set dropdown_options = {'entity': item.getEntityID()} %}
@@ -121,10 +111,8 @@
         {% else %}
             {% set dropdown_itemtype = call("PluginFieldsDropdown::getClassname", [name]) %}
         {% endif %}
-        {% if input_name == name %}
-            {% set name_fk = call("getForeignKeyFieldForItemType", [dropdown_itemtype]) %}
-        {% endif %}
-        {{ macros.dropdownField(dropdown_itemtype, name_fk ?? input_name, value, label, field_options|merge(dropdown_options|default({}))) }}
+        {% set name_fk = call("getForeignKeyFieldForItemType", [dropdown_itemtype]) %}
+        {{ macros.dropdownField(dropdown_itemtype, name_fk, value, label, field_options|merge(dropdown_options|default({}))) }}
 
     {% elseif type matches '/^dropdown-.+/i' %}
         {% set dropdown_options = {'entity': item.getEntityID()} %}
@@ -139,35 +127,33 @@
         {% if field['multiple'] %}
             {% set dropdown_options = dropdown_options|merge({'multiple': true}) %}
         {% endif %}
-        {{ macros.dropdownField(field['dropdown_class'], input_name, value, label, field_options|merge(dropdown_options|default({}))) }}
+        {{ macros.dropdownField(field['dropdown_class'], name, value, label, field_options|merge(dropdown_options|default({}))) }}
 
     {% elseif type == 'glpi_item' %}
         {% if not massiveaction %}
-
-            {% if item is instanceof('Glpi\\Form\\Form') %}
-                {% set itemtype_input_name = input_name ~ '[itemtype]' %}
-                {% set items_id_input_name = input_name ~ '[items_id]' %}
-            {% else %}
-                {% set itemtype_input_name = 'itemtype_' ~ name %}
-                {% set items_id_input_name = 'items_id_' ~ name %}
-            {% endif %}
+            {% set itemtype_prefix = 'itemtype_' %}
+            {% set items_id_prefix = 'items_id_' %}
 
             {% if container.fields['type'] == 'tab' %}
                 {# start new row for glpi object  #}
                 <div class="w-100"></div>
             {% endif %}
 
-            {% set items_id_dropdown %}
+            {{ macros.dropdownArrayField(itemtype_prefix ~ name, value.itemtype, field['allowed_values'], label, field_options|merge({
+                'rand': rand,
+                'display_emptychoice': true,
+            })) }}
+            <div class='form-field row col-12 {{ container.fields['type'] == 'tab' ? 'col-sm-6' : '' }} mb-2'>
                 {% do call('Ajax::updateItemOnSelectEvent',
                     [
-                        'dropdown_' ~ itemtype_input_name ~ rand,
+                        'dropdown_' ~ itemtype_prefix ~ name ~ rand,
                         'results_items_id' ~ (rand),
                         config('root_doc') ~ '/ajax/dropdownAllItems.php',
                         {
                             'idtable'             : '__VALUE__',
-                            'name'                : items_id_input_name,
+                            'name'                : items_id_prefix ~ name,
                             'entity_restrict'     : item.getEntityID(),
-                            'dom_name'            : items_id_input_name,
+                            'dom_name'            : items_id_prefix ~ name,
                             'display_emptychoice' : false,
                             'action'              : 'get_items_from_itemtype',
                             'dom_rand'            : rand,
@@ -175,36 +161,31 @@
                         }
                 ]) %}
 
-                <span id='results_items_id{{ rand }}' class='col-lg-14'>
-                    {% if value.itemtype|default('') != '' %}
-                        {{ macros.dropdownField(value.itemtype, items_id_input_name, value.items_id|default(''), ' ', field_options|merge({
-                            'entity': value.itemtype|default('') == 'User' ? -1 : item.getEntityID(),
-                            'rand': rand,
-                            'right': 'all',
-                            'displaywith': ['otherserial', 'serial'],
-                            'display_emptychoice' : false,
-                            'no_label': true,
-                            'full_width': true,
-                        })) }}
-                    {% endif %}
-                </span>
-            {% endset %}
+                {# fake label for DOM disposition #}
+                <label class="col-form-label col-xxl-4 text-xxl-end" for="dropdown_items_id_testfield{{ rand }}">
+                </label>
 
-            {{ macros.dropdownArrayField(itemtype_input_name, value.itemtype|default(''), field['allowed_values'], label, field_options|merge({
-                'rand'               : rand,
-                'display_emptychoice': true,
-                'add_field_class'    : field_options.add_field_class|default('') ~ ' glpi-fields-plugin-glpi-item-field',
-                'add_field_html'     : items_id_dropdown
-            })) }}
+                <div class="col-xxl-8 field-container">
+                    <span id='results_items_id{{ rand }}' class='col-lg-14'>
+                        {% if value.itemtype != '' %}
+                            {{ macros.dropdownField(value.itemtype, items_id_prefix ~ name, value.items_id, ' ', field_options|merge({
+                                'entity': value.itemtype == 'User' ? -1 : item.getEntityID(),
+                                'rand': rand,
+                                'right': 'all',
+                                'displaywith': ['otherserial', 'serial'],
+                                'display_emptychoice' : false,
+                                'no_label': true
+                            })) }}
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
         {% endif %}
     {% endif %}
 {% endfor %}
 
-{% if not already_wrapped and not dropdown_item%}
-
-                    {% if item.isNewItem() and item is instanceof('User') %}
-                        </div>
-                    {% endif %}
+{% if not already_wrapped %}
+                    </div>
                 </div>
             </div>
         </div>

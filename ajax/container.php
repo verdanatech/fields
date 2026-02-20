@@ -28,16 +28,17 @@
  * -------------------------------------------------------------------------
  */
 
-use Glpi\Exception\Http\AccessDeniedHttpException;
-use Glpi\Exception\Http\NotFoundHttpException;
-
+include('../../../inc/includes.php');
 Session::checkLoginUser();
+
+use Glpi\Http\Response;
 
 if (isset($_GET['action']) && $_GET['action'] === 'get_fields_html') {
 
     $right = PluginFieldsProfile::getRightOnContainer($_SESSION['glpiactiveprofile']['id'], $_GET['id']);
     if ($right < READ) {
-        throw new AccessDeniedHttpException();
+        Response::sendError(403, 'Forbidden');
+        return;
     }
 
     $containers_id = $_GET['id'];
@@ -47,12 +48,10 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_fields_html') {
     $subtype       = $_GET['subtype'];
     $input         = $_GET['input'];
 
-    $dbu = new DbUtils();
-    $item = $dbu->getItemForItemtype($itemtype);
+    $item = new $itemtype();
     if ($items_id > 0 && !$item->getFromDB($items_id)) {
-        throw new NotFoundHttpException();
+        Response::sendError(404, 'Not Found');
     }
-
     $item->input = $input;
 
     $display_condition = new PluginFieldsContainerDisplayCondition();
@@ -67,5 +66,5 @@ if (isset($_GET['action']) && $_GET['action'] === 'get_fields_html') {
         echo '';
     }
 } else {
-    throw new NotFoundHttpException();
+    Response::sendError(404, 'Not Found');
 }

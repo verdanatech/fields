@@ -28,28 +28,23 @@
  * -------------------------------------------------------------------------
  */
 
-/** @var array $CFG_GLPI */
-global $CFG_GLPI;
-
-define('PLUGIN_FIELDS_VERSION', '1.23.3');
+define('PLUGIN_FIELDS_VERSION', '1.21.28');
 
 // Minimal GLPI version, inclusive
-define('PLUGIN_FIELDS_MIN_GLPI', '11.0.2');
+define('PLUGIN_FIELDS_MIN_GLPI', '10.0.11');
 // Maximum GLPI version, exclusive
-define('PLUGIN_FIELDS_MAX_GLPI', '11.0.99');
+define('PLUGIN_FIELDS_MAX_GLPI', '10.0.99');
 
 if (!defined('PLUGINFIELDS_DIR')) {
     define('PLUGINFIELDS_DIR', Plugin::getPhpDir('fields'));
 }
-
 if (!defined('PLUGINFIELDS_WEB_DIR')) {
-    define('PLUGINFIELDS_WEB_DIR', $CFG_GLPI['root_doc'] . '/plugins/fields');
+    define('PLUGINFIELDS_WEB_DIR', Plugin::getWebDir('fields'));
 }
 
 if (!defined('PLUGINFIELDS_DOC_DIR')) {
     define('PLUGINFIELDS_DOC_DIR', GLPI_PLUGIN_DOC_DIR . '/fields');
 }
-
 if (!file_exists(PLUGINFIELDS_DOC_DIR)) {
     mkdir(PLUGINFIELDS_DOC_DIR);
 }
@@ -57,7 +52,6 @@ if (!file_exists(PLUGINFIELDS_DOC_DIR)) {
 if (!defined('PLUGINFIELDS_CLASS_PATH')) {
     define('PLUGINFIELDS_CLASS_PATH', PLUGINFIELDS_DOC_DIR . '/inc');
 }
-
 if (!file_exists(PLUGINFIELDS_CLASS_PATH)) {
     mkdir(PLUGINFIELDS_CLASS_PATH);
 }
@@ -65,17 +59,10 @@ if (!file_exists(PLUGINFIELDS_CLASS_PATH)) {
 if (!defined('PLUGINFIELDS_FRONT_PATH')) {
     define('PLUGINFIELDS_FRONT_PATH', PLUGINFIELDS_DOC_DIR . '/front');
 }
-
 if (!file_exists(PLUGINFIELDS_FRONT_PATH)) {
     mkdir(PLUGINFIELDS_FRONT_PATH);
 }
 
-use Glpi\Form\Destination\FormDestinationChange;
-use Glpi\Form\Destination\FormDestinationManager;
-use Glpi\Form\Destination\FormDestinationProblem;
-use Glpi\Form\Destination\FormDestinationTicket;
-use Glpi\Form\Migration\TypesConversionMapper;
-use Glpi\Form\QuestionType\QuestionTypesManager;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -99,6 +86,8 @@ function plugin_init_fields()
     $pluginfields_autoloader = new PluginFieldsAutoloader([PLUGINFIELDS_CLASS_PATH]);
     $pluginfields_autoloader->register();
 
+    Plugin::load('genericobject', true);
+
     if ((Session::getLoginUserID() || isCommandLine()) && Plugin::isPluginActive('fields')) {
         // Init hook about itemtype(s) for plugin fields
         if (!isset($PLUGIN_HOOKS['plugin_fields'])) {
@@ -107,7 +96,7 @@ function plugin_init_fields()
 
         // When a Category is changed during ticket creation
         if (
-            $_POST !== []
+            !empty($_POST)
             && isset($_POST['_plugin_fields_type'])
             && ($_SERVER['REQUEST_URI'] == Ticket::getFormURL())
         ) {
@@ -131,14 +120,12 @@ function plugin_init_fields()
             // add link in plugin page
             $PLUGIN_HOOKS['config_page']['fields'] = 'front/container.php';
 
-            // add entry to configuration menu (only if user has read access to config)
-            if (Session::haveRight('config', READ)) {
-                $PLUGIN_HOOKS['menu_toadd']['fields'] = ['config' => PluginFieldsMenu::class];
-            }
+            // add entry to configuration menu
+            $PLUGIN_HOOKS['menu_toadd']['fields'] = ['config' => 'PluginFieldsMenu'];
 
             // add tabs to itemtypes
             $itemtypes = array_unique(PluginFieldsContainer::getEntries());
-            if ($itemtypes !== []) {
+            if (count($itemtypes) > 0) {
                 Plugin::registerClass(
                     'PluginFieldsContainer',
                     ['addtabon' => $itemtypes],
@@ -147,11 +134,11 @@ function plugin_init_fields()
 
             //include js and css
             $debug = (isset($_SESSION['glpi_use_mode'])
-                   && $_SESSION['glpi_use_mode'] == Session::DEBUG_MODE);
-            if (!$debug && file_exists(__DIR__ . '/public/css/fields.min.css')) {
+                   && $_SESSION['glpi_use_mode'] == Session::DEBUG_MODE ? true : false);
+            if (!$debug && file_exists(__DIR__ . '/css/fields.min.css')) {
                 $PLUGIN_HOOKS['add_css']['fields'][] = 'css/fields.min.css';
             } else {
-                $PLUGIN_HOOKS['add_css']['fields'][] = 'css/fields.scss';
+                $PLUGIN_HOOKS['add_css']['fields'][] = 'css/fields.css';
             }
 
             // Add/delete profiles to automaticaly to container
@@ -164,7 +151,7 @@ function plugin_init_fields()
                 plugin_fields_script_endswith('container.form.php')
             ) {
                 $PLUGIN_HOOKS['add_javascript']['fields'][] = 'lib/redips-drag-min.js';
-                if (!$debug && file_exists(__DIR__ . '/public/js/drag-field-row.min.js')) {
+                if (!$debug && file_exists(__DIR__ . '/js/drag-field-row.min.js')) {
                     $PLUGIN_HOOKS['add_javascript']['fields'][] = 'js/drag-field-row.min.js';
                 } else {
                     $PLUGIN_HOOKS['add_javascript']['fields'][] = 'js/drag-field-row.js';
@@ -205,9 +192,6 @@ function plugin_init_fields()
             'PluginFieldsField',
             'showForTab',
         ];
-
-        // Register fields question type
-        plugin_fields_register_plugin_types();
     }
 }
 
@@ -220,9 +204,12 @@ function plugin_init_fields()
  */
 function plugin_fields_script_endswith($scriptname)
 {
-    return str_contains((string) $_SERVER['REQUEST_URI'], $scriptname);
-}
+    //append plugin directory to avoid dumb errors...
+    $scriptname  = 'fields/front/' . $scriptname;
+    $script_name = $_SERVER['SCRIPT_NAME'];
 
+    return substr($script_name, -strlen($scriptname)) === $scriptname;
+}
 
 
 
@@ -237,7 +224,7 @@ function plugin_version_fields()
     return [
         'name'         => __('Additional fields', 'fields'),
         'version'      => PLUGIN_FIELDS_VERSION,
-        'author'       => "Teclib', Olivier Moron",
+        'author'       => 'Teclib\', Olivier Moron',
         'homepage'     => 'https://github.com/pluginsGLPI/fields',
         'license'      => 'GPLv2+',
         'requirements' => [
@@ -278,7 +265,7 @@ function plugin_fields_checkFiles()
     global $DB;
 
     // Clean all existing files
-    array_map(unlink(...), glob(PLUGINFIELDS_DOC_DIR . '/*/*'));
+    array_map('unlink', glob(PLUGINFIELDS_DOC_DIR . '/*/*'));
 
     // Regenerate dropdowns
     if ($DB->tableExists(PluginFieldsField::getTable())) {
@@ -310,94 +297,97 @@ function plugin_fields_exportBlockAsYaml($container_id = null)
         'container' => [],
     ];
 
-    if (isset($_SESSION['glpiactiveentities']) && Session::getLoginUserID() && Plugin::isPluginActive('fields') && $DB->tableExists(PluginFieldsContainer::getTable())) {
-        $where              = [];
-        $where['is_active'] = true;
-        if ($container_id != null) {
-            $where['id'] = $container_id;
-        }
+    if (
+        isset($_SESSION['glpiactiveentities'])
+        && Session::getLoginUserID()
+        && Plugin::isPluginActive('fields')
+    ) {
+        if ($DB->tableExists(PluginFieldsContainer::getTable())) {
+            $where              = [];
+            $where['is_active'] = true;
+            if ($container_id != null) {
+                $where['id'] = $container_id;
+            }
+            $container_obj = new PluginFieldsContainer();
+            $containers    = $container_obj->find($where);
 
-        $container_obj = new PluginFieldsContainer();
-        $containers    = $container_obj->find($where);
-        foreach ($containers as $container) {
-            $itemtypes = ((string) $container['itemtypes'] !== '')
-                ? PluginFieldsToolbox::decodeJSONItemtypes($container['itemtypes'], true)
-                : [];
+            foreach ($containers as $container) {
+                $itemtypes = (strlen($container['itemtypes']) > 0)
+                    ? json_decode($container['itemtypes'], true)
+                    : [];
 
-            foreach ($itemtypes as $itemtype) {
-                $fields_obj = new PluginFieldsField();
-                // to get translation
-                $container['itemtype']                                      = PluginFieldsContainer::getType();
-                $yaml_conf['container'][$container['id'] . '-' . $itemtype] = [
-                    'id'       => (int) $container['id'],
-                    'name'     => PluginFieldsLabelTranslation::getLabelFor($container),
-                    'itemtype' => $itemtype,
-                    'type'     => $container['type'],
-                    'subtype'  => $container['subtype'],
-                    'fields'   => [],
-                ];
-                $fields = $fields_obj->find(['plugin_fields_containers_id' => $container['id'],
-                    'is_active'                                            => true,
-                    'is_readonly'                                          => false,
-                ]);
-                if (count($fields) > 0) {
-                    foreach ($fields as $field) {
-                        $tmp_field       = [];
-                        $tmp_field['id'] = (int) $field['id'];
+                foreach ($itemtypes as $itemtype) {
+                    $fields_obj = new PluginFieldsField();
+                    // to get translation
+                    $container['itemtype']                                      = PluginFieldsContainer::getType();
+                    $yaml_conf['container'][$container['id'] . '-' . $itemtype] = [
+                        'id'       => (int) $container['id'],
+                        'name'     => PluginFieldsLabelTranslation::getLabelFor($container),
+                        'itemtype' => $itemtype,
+                        'type'     => $container['type'],
+                        'subtype'  => $container['subtype'],
+                        'fields'   => [],
+                    ];
+                    $fields = $fields_obj->find(['plugin_fields_containers_id' => $container['id'],
+                        'is_active'                                            => true,
+                        'is_readonly'                                          => false,
+                    ]);
+                    if (count($fields)) {
+                        foreach ($fields as $field) {
+                            $tmp_field       = [];
+                            $tmp_field['id'] = (int) $field['id'];
 
-                        //to get translation
-                        $field['itemtype']           = PluginFieldsField::getType();
-                        $tmp_field['label']          = PluginFieldsLabelTranslation::getLabelFor($field);
-                        $tmp_field['xml_node']       = strtoupper((string) $field['name']);
-                        $tmp_field['type']           = $field['type'];
-                        $tmp_field['ranking']        = $field['ranking'];
-                        $tmp_field['default_value']  = $field['default_value'];
-                        $tmp_field['mandatory']      = $field['mandatory'];
-                        $tmp_field['possible_value'] = '';
+                            //to get translation
+                            $field['itemtype']           = PluginFieldsField::getType();
+                            $tmp_field['label']          = PluginFieldsLabelTranslation::getLabelFor($field);
+                            $tmp_field['xml_node']       = strtoupper($field['name']);
+                            $tmp_field['type']           = $field['type'];
+                            $tmp_field['ranking']        = $field['ranking'];
+                            $tmp_field['default_value']  = $field['default_value'];
+                            $tmp_field['mandatory']      = $field['mandatory'];
+                            $tmp_field['possible_value'] = '';
 
-                        switch ($field['type']) {
-                            case 'dropdown':
-                                $dbu = new DbUtils();
-                                $obj = $dbu->getItemForItemtype($itemtype);
-                                $obj->getEmpty();
+                            switch ($field['type']) {
+                                case 'dropdown':
+                                    $obj = new $itemtype();
+                                    $obj->getEmpty();
 
-                                $dropdown_itemtype     = PluginFieldsDropdown::getClassname($field['name']);
-                                $tmp_field['xml_node'] = strtoupper(getForeignKeyFieldForItemType($dropdown_itemtype));
+                                    $dropdown_itemtype     = PluginFieldsDropdown::getClassname($field['name']);
+                                    $tmp_field['xml_node'] = strtoupper(getForeignKeyFieldForItemType($dropdown_itemtype));
 
-                                $dropdown_obj = $dbu->getItemForItemtype($dropdown_itemtype);
-                                $dropdown_datas = $dropdown_obj->find();
-                                $datas          = [];
-                                foreach ($dropdown_datas as $value) {
-                                    $items          = [];
-                                    $items['id']    = (int) $value['id'];
-                                    $items['value'] = $value['name'];
-                                    $datas[]        = $items;
-                                }
-
-                                $tmp_field['possible_value'] = $datas;
-                                break;
-                            case 'yesno':
-                                $datas                       = [];
-                                $datas['0']['id']            = 0;
-                                $datas['0']['value']         = __('No');
-                                $datas['1']['id']            = 1;
-                                $datas['1']['value']         = __('Yes');
-                                $tmp_field['possible_value'] = $datas;
-                                break;
-                            case 'dropdownuser':
-                                $datas                       = Dropdown::getDropdownUsers(['is_active' => 1, 'is_deleted' => 0], false);
-                                $tmp_field['possible_value'] = $datas['results'];
-                                break;
+                                    $dropdown_obj   = new $dropdown_itemtype();
+                                    $dropdown_datas = $dropdown_obj->find();
+                                    $datas          = [];
+                                    foreach ($dropdown_datas as $value) {
+                                        $items          = [];
+                                        $items['id']    = (int) $value['id'];
+                                        $items['value'] = $value['name'];
+                                        $datas[]        = $items;
+                                    }
+                                    $tmp_field['possible_value'] = $datas;
+                                    break;
+                                case 'yesno':
+                                    $datas                       = [];
+                                    $datas['0']['id']            = 0;
+                                    $datas['0']['value']         = __('No');
+                                    $datas['1']['id']            = 1;
+                                    $datas['1']['value']         = __('Yes');
+                                    $tmp_field['possible_value'] = $datas;
+                                    break;
+                                case 'dropdownuser':
+                                    $datas                       = Dropdown::getDropdownUsers(['is_active' => 1, 'is_deleted' => 0], false);
+                                    $tmp_field['possible_value'] = $datas['results'];
+                                    break;
+                            }
+                            $yaml_conf['container'][$container['id'] . '-' . $itemtype]['fields'][] = $tmp_field;
                         }
-
-                        $yaml_conf['container'][$container['id'] . '-' . $itemtype]['fields'][] = $tmp_field;
                     }
                 }
             }
         }
     }
 
-    if ($yaml_conf['container'] !== []) {
+    if (!empty($yaml_conf['container'])) {
         $dump     = Yaml::dump($yaml_conf, 10);
         $filename = GLPI_TMP_DIR . '/fields_conf.yaml';
         file_put_contents($filename, $dump);
@@ -406,35 +396,4 @@ function plugin_fields_exportBlockAsYaml($container_id = null)
     }
 
     return false;
-}
-
-function plugin_fields_register_plugin_types(): void
-{
-    $types = QuestionTypesManager::getInstance();
-    $type_mapper = TypesConversionMapper::getInstance();
-    $destination_manager = FormDestinationManager::getInstance();
-
-    // Register question category, type and converter if valid fields are defined
-    if (PluginFieldsQuestionType::hasAvailableFields()) {
-        // Register question category
-        $types->registerPluginCategory(new PluginFieldsQuestionTypeCategory());
-
-        // Register question type
-        $types->registerPluginQuestionType(new PluginFieldsQuestionType());
-
-        // Register common ITIL field for tickets, changes and problems
-        foreach ([
-            new FormDestinationTicket(),
-            new FormDestinationChange(),
-            new FormDestinationProblem(),
-        ] as $itil_destination) {
-            $destination_manager->registerPluginCommonITILConfigField(
-                $itil_destination::class,
-                new PluginFieldsDestinationField($itil_destination),
-            );
-        }
-
-        // Register converter for migration
-        $type_mapper->registerPluginQuestionTypeConverter('fields', new PluginFieldsQuestionType());
-    }
 }

@@ -28,8 +28,6 @@
  * -------------------------------------------------------------------------
  */
 
-use Glpi\Socket;
-
 class PluginFieldsToolbox
 {
     /**
@@ -50,8 +48,8 @@ class PluginFieldsToolbox
         $name = preg_replace('/[^\da-z]/i', '', $name);
 
         // 3. if empty, uses a random number
-        if ((string) (string) $name === '') {
-            $name = random_int(0, mt_getrandmax());
+        if (strlen($name) == 0) {
+            $name = rand();
         }
 
         // 4. replace numbers by letters
@@ -92,7 +90,9 @@ class PluginFieldsToolbox
     /**
      * Fix dropdown names that were generated prior to Fields 1.9.2.
      *
+     * @param Migration $migration
      * @param mixed     $condition
+     *
      * @return void
      */
     public function fixFieldsNames(Migration $migration, $condition)
@@ -115,7 +115,7 @@ class PluginFieldsToolbox
             }
         }
 
-        if ($bad_named_fields === []) {
+        if (count($bad_named_fields) === 0) {
             return;
         }
 
@@ -132,7 +132,6 @@ class PluginFieldsToolbox
                 // limit fields names to 64 chars (MySQL limit)
                 $new_name = substr((string) $new_name, 0, 64);
             }
-
             while (
                 'dropdown' === $field['type']
                 && strlen(getTableForItemType(PluginFieldsDropdown::getClassname($new_name))) > 64
@@ -140,7 +139,6 @@ class PluginFieldsToolbox
                 // limit tables names to 64 chars (MySQL limit)
                 $new_name = substr((string) $new_name, 0, -1);
             }
-
             $DB->update(
                 PluginFieldsField::getTable(),
                 ['name' => $new_name],
@@ -188,7 +186,6 @@ class PluginFieldsToolbox
                         // other cases can be ignored
                         continue;
                     }
-
                     $migration->changeField(
                         $table_to_update['TABLE_NAME'],
                         $old_field_name,
@@ -205,6 +202,8 @@ class PluginFieldsToolbox
      * Return a list of GLPI itemtypes.
      * These itemtypes will be available to attach fields containers on them,
      * and will be usable in dropdown / glpi_item fields.
+     *
+     * @return array
      */
     public static function getGlpiItemtypes(): array
     {
@@ -229,14 +228,8 @@ class PluginFieldsToolbox
             PDU::class,
             PassiveDCEquipment::class,
             Cable::class,
-            Socket::class,
+            Glpi\Socket::class,
         ];
-
-        foreach ($CFG_GLPI['asset_types'] as $asset_type) {
-            if (str_starts_with((string) $asset_type, "Glpi\CustomAsset")) {
-                $assets_itemtypes[] = $asset_type;
-            }
-        }
 
         $assistance_itemtypes = [
             Ticket::class,
@@ -285,14 +278,12 @@ class PluginFieldsToolbox
         foreach (CommonDevice::getDeviceTypes() as $device_itemtype) {
             $components_itemtypes[] = $device_itemtype;
         }
-
         sort($components_itemtypes, SORT_NATURAL);
 
         $component_items_itemtypes = [];
         foreach (Item_Devices::getDeviceTypes() as $deviceitem_itemtype) {
             $component_items_itemtypes[] = $deviceitem_itemtype;
         }
-
         sort($component_items_itemtypes, SORT_NATURAL);
 
         $plugins_itemtypes = [];
@@ -317,7 +308,7 @@ class PluginFieldsToolbox
             NetworkPort::class,
             Notification::class,
             NotificationTemplate::class,
-            ItemVirtualMachine::class,
+            ComputerVirtualMachine::class,
         ];
 
         $all_itemtypes = [
@@ -340,11 +331,9 @@ class PluginFieldsToolbox
                 if (!class_exists($go_itemtype)) {
                     continue;
                 }
-
                 $go_itemtypes[] = $go_itemtype;
             }
-
-            if ($go_itemtypes !== []) {
+            if (count($go_itemtypes) > 0) {
                 $all_itemtypes[$plugin->getInfo('genericobject', 'name')] = $go_itemtypes;
             }
         }
@@ -359,13 +348,11 @@ class PluginFieldsToolbox
                     if (!array_key_exists($plugin_key, $plugins_names)) {
                         $plugins_names[$plugin_key] = Plugin::getInfo($plugin_key, 'name');
                     }
-
                     $prefix = $plugins_names[$plugin_key] . ' - ';
                 }
 
                 $named_itemtypes[$itemtype] = $prefix . $itemtype::getTypeName(Session::getPluralNumber());
             }
-
             $all_itemtypes[$section] = $named_itemtypes;
         }
 
@@ -373,6 +360,11 @@ class PluginFieldsToolbox
         $all_itemtypes = array_filter($all_itemtypes);
 
         return $all_itemtypes;
+    }
+
+    public static function sanitizeLabel(string $label): string
+    {
+        return preg_replace('/[^\p{L}\p{N}\s\-\_\.]/u', '', $label);
     }
 
     public static function decodeJSONItemtypes(string $itemtypes, ?bool $associative = null)
@@ -384,10 +376,5 @@ class PluginFieldsToolbox
         }
 
         return $jsonitemtype;
-    }
-
-    public static function sanitizeLabel(string $label): string
-    {
-        return preg_replace('/[^\p{L}\p{N}\s\-\_\.]/u', '', $label);
     }
 }

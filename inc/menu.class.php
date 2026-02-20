@@ -39,16 +39,14 @@ class PluginFieldsMenu extends CommonGLPI
 
     public static function getMenuContent()
     {
-        /** @var array $CFG_GLPI */
-        global $CFG_GLPI;
-
         if (!Session::haveRight('entity', READ)) {
             return false;
         }
 
+        $front_fields = Plugin::getPhpDir('fields', false) . '/front';
         $menu         = [
             'title' => self::getMenuName(),
-            'page'  => PluginFieldsContainer::getSearchURL(false),
+            'page'  => "$front_fields/container.php",
             'icon'  => PluginFieldsContainer::getIcon(),
         ];
 

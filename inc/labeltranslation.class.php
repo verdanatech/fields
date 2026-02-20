@@ -28,14 +28,11 @@
  * -------------------------------------------------------------------------
  */
 
-use Glpi\Features\Clonable;
-
 class PluginFieldsLabelTranslation extends CommonDBChild
 {
-    use Clonable;
+    use Glpi\Features\Clonable;
 
     public static $itemtype = 'itemtype';
-
     public static $items_id = 'items_id';
 
     /**
@@ -60,7 +57,7 @@ class PluginFieldsLabelTranslation extends CommonDBChild
         if (!$DB->tableExists($table)) {
             $migration->displayMessage(sprintf(__('Installing %s'), $table));
 
-            $query = "CREATE TABLE IF NOT EXISTS `{$table}` (
+            $query = "CREATE TABLE IF NOT EXISTS `$table` (
                   `id`                         INT          {$default_key_sign} NOT NULL auto_increment,
                   `itemtype`                   VARCHAR(30)  NOT NULL,
                   `items_id`                   INT          {$default_key_sign} NOT NULL,
@@ -72,7 +69,7 @@ class PluginFieldsLabelTranslation extends CommonDBChild
                   KEY `language`               (`language`),
                   UNIQUE KEY `unicity` (`itemtype`, `items_id`, `language`)
                ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC;";
-            $DB->doQuery($query);
+            $DB->doQuery($query) or die($DB->error());
         }
 
         if ($DB->fieldExists($table, 'plugin_fields_itemtype')) {
@@ -85,7 +82,7 @@ class PluginFieldsLabelTranslation extends CommonDBChild
         if ($DB->fieldExists($table, 'plugin_fields_items_id')) {
             $migration->dropKey($table, 'plugin_fields_items_id');
             $migration->migrationOneTable($table);
-            $migration->changeField($table, 'plugin_fields_items_id', 'items_id', sprintf('INT %s NOT NULL', $default_key_sign));
+            $migration->changeField($table, 'plugin_fields_items_id', 'items_id', "INT {$default_key_sign} NOT NULL");
             $migration->addKey($table, 'items_id');
         }
 
@@ -129,7 +126,6 @@ class PluginFieldsLabelTranslation extends CommonDBChild
         if (!($item instanceof CommonDBTM)) {
             return '';
         }
-
         $nb = countElementsInTable(
             self::getTable(),
             [
@@ -138,12 +134,7 @@ class PluginFieldsLabelTranslation extends CommonDBChild
             ],
         );
 
-        return self::createTabEntry(
-            self::getTypeName($nb),
-            $nb,
-            null,
-            'ti ti-language',
-        );
+        return self::createTabEntry(self::getTypeName($nb), $nb);
     }
 
     public static function displayTabContentForItem(CommonGLPI $item, $tabnum = 1, $withtemplate = 0)
@@ -166,16 +157,13 @@ class PluginFieldsLabelTranslation extends CommonDBChild
      */
     public static function showTranslations(CommonDBTM $item)
     {
-        /** @var array $CFG_GLPI */
-        global $CFG_GLPI;
-
         $canedit = $item->can($item->getID(), UPDATE);
         $rand    = mt_rand();
         if ($canedit) {
-            echo "<div id='viewtranslation" . $item->getID() . ($rand . "'></div>");
+            echo "<div id='viewtranslation" . $item->getID() . "$rand'></div>";
 
             $ajax_params = [
-                'type'     => self::class,
+                'type'     => __CLASS__,
                 'itemtype' => $item::getType(),
                 'items_id' => $item->fields['id'],
                 'id'       => -1,
@@ -183,15 +171,15 @@ class PluginFieldsLabelTranslation extends CommonDBChild
             echo Html::scriptBlock('
                 addTranslation' . $item->getID() . $rand . ' = function() {
                     $("#viewtranslation' . $item->getID() . $rand . '").load(
-                        "' . $CFG_GLPI['root_doc'] . '/plugins/fields/ajax/viewtranslations.php",
+                        "' . Plugin::getWebDir('fields') . '/ajax/viewtranslations.php",
                         ' . json_encode($ajax_params) . '
                     );
                 };
             ');
 
-            echo "<div class='center'>"
-                . "<a class='vsubmit' href='javascript:addTranslation" . $item->getID() . ($rand . "();'>")
-                . __('Add a new translation') . '</a></div><br>';
+            echo "<div class='center'>" .
+                "<a class='vsubmit' href='javascript:addTranslation" . $item->getID() . "$rand();'>" .
+                __('Add a new translation') . '</a></div><br>';
         }
 
         $obj   = new self();
@@ -205,35 +193,32 @@ class PluginFieldsLabelTranslation extends CommonDBChild
 
         if (count($found) > 0) {
             if ($canedit) {
-                Html::openMassiveActionsForm('mass' . self::class . $rand);
-                $massiveactionparams = ['container' => 'mass' . self::class . $rand];
+                Html::openMassiveActionsForm('mass' . __CLASS__ . $rand);
+                $massiveactionparams = ['container' => 'mass' . __CLASS__ . $rand];
                 Html::showMassiveActions($massiveactionparams);
             }
-
             echo "<div class='center'>";
             echo "<table class='tab_cadre_fixehov'><tr class='tab_bg_2'>";
             echo "<th colspan='4'>" . __('List of translations') . '</th></tr>';
             if ($canedit) {
                 echo "<th width='10'>";
-                echo Html::getCheckAllAsCheckbox('mass' . self::class . $rand);
+                echo Html::getCheckAllAsCheckbox('mass' . __CLASS__ . $rand);
                 echo '</th>';
             }
-
             echo '<th>' . __('Language', 'fields') . '</th>';
             echo '<th>' . __('Label', 'fields') . '</th>';
             foreach ($found as $data) {
                 echo "<tr class='tab_bg_1' " . ($canedit ? "style='cursor:pointer'
-                      onClick=\"viewEditTranslation" . $data['id'] . ($rand . '();"') : '') . '>';
+                      onClick=\"viewEditTranslation" . $data['id'] . "$rand();\"" : '') . '>';
                 if ($canedit) {
                     echo "<td class='center'>";
-                    Html::showMassiveActionCheckBox(self::class, $data['id']);
+                    Html::showMassiveActionCheckBox(__CLASS__, $data['id']);
                     echo '</td>';
                 }
-
                 echo '<td>';
                 if ($canedit) {
                     $ajax_params = [
-                        'type'     => self::class,
+                        'type'     => __CLASS__,
                         'itemtype' => $item::getType(),
                         'items_id' => $item->getID(),
                         'id'       => $data['id'],
@@ -241,19 +226,17 @@ class PluginFieldsLabelTranslation extends CommonDBChild
                     echo Html::scriptBlock('
                         viewEditTranslation' . $data['id'] . $rand . ' = function() {
                             $("#viewtranslation' . $item->getID() . $rand . '").load(
-                                "' . $CFG_GLPI['root_doc'] . '/plugins/fields/ajax/viewtranslations.php",
+                                "' . Plugin::getWebDir('fields') . '/ajax/viewtranslations.php",
                                 ' . json_encode($ajax_params) . '
                             );
                         };
                     ');
                 }
-
                 echo Dropdown::getLanguageName($data['language']);
                 echo '</td><td>';
                 echo  $data['label'];
                 echo '</td></tr>';
             }
-
             echo '</table>';
             if ($canedit) {
                 $massiveactionparams['ontop'] = false;
@@ -264,6 +247,8 @@ class PluginFieldsLabelTranslation extends CommonDBChild
             echo "<table class='tab_cadre_fixe'><tr class='tab_bg_2'>";
             echo "<th class='b'>" . __('No translation found') . '</th></tr></table>';
         }
+
+        return;
     }
 
     /**
@@ -283,13 +268,12 @@ class PluginFieldsLabelTranslation extends CommonDBChild
             // Create item
             $this->check(-1, CREATE);
         }
-
         $this->showFormHeader();
         echo "<tr class='tab_bg_1'>";
         echo '<td>' . __('Language') . '&nbsp;:</td>';
         echo '<td>';
-        echo sprintf("<input type='hidden' name='itemtype' value='%s'>", $itemtype);
-        echo sprintf("<input type='hidden' name='items_id' value='%d'>", $items_id);
+        echo "<input type='hidden' name='itemtype' value='{$itemtype}'>";
+        echo "<input type='hidden' name='items_id' value='{$items_id}'>";
         if ($id > 0) {
             echo Dropdown::getLanguageName($this->fields['language']);
         } else {
@@ -304,7 +288,6 @@ class PluginFieldsLabelTranslation extends CommonDBChild
                 ],
             );
         }
-
         echo "</td><td colspan='2'>&nbsp;</td></tr>";
 
         echo "<tr class='tab_bg_1'>";
@@ -317,6 +300,8 @@ class PluginFieldsLabelTranslation extends CommonDBChild
         echo '</td></tr>';
 
         $this->showFormButtons();
+
+        return;
     }
 
     /**

@@ -28,7 +28,8 @@
  * -------------------------------------------------------------------------
  */
 
-include(__DIR__ . '/../hook.php');
+include('../../../inc/includes.php');
+include('../hook.php');
 
 Session::checkRight('config', READ);
 
@@ -40,7 +41,7 @@ if (isset($_GET['id'])) {
 if (plugin_fields_exportBlockAsYaml($ID)) {
     $filename = 'fields_conf.yaml';
     $path     = GLPI_TMP_DIR . '/fields_conf.yaml';
-    Toolbox::getFileAsResponse($path, $filename, 'text/yaml')->send();
+    Toolbox::sendFile($path, $filename, 'text/yaml');
 } else {
     Session::addMessageAfterRedirect('No data to export', false, INFO);
     Html::back();

@@ -5,17 +5,16 @@ use PhpCsFixer\Finder;
 
 $finder = Finder::create()
     ->in(__DIR__)
-    ->name('*.php')
-    ->ignoreVCSIgnored(true);
+    ->name('*.php');
 
 $config = new Config();
 
 $rules = [
-    '@PER-CS' => true, // Latest PER rules.
+    '@PER-CS2.0'                  => true,
+    'trailing_comma_in_multiline' => ['elements' => ['arguments', 'array_destructuring', 'arrays']], // For PHP 7.4 compatibility
 ];
 
 return $config
     ->setRules($rules)
     ->setFinder($finder)
-    ->setCacheFile(__DIR__ . '/var/php-cs-fixer/.php-cs-fixer.cache')
-;
+    ->setUsingCache(false);
