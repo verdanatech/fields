@@ -28,7 +28,6 @@
  * -------------------------------------------------------------------------
  */
 
-include('../../../inc/includes.php');
 Session::checkRight('config', UPDATE);
 
 $translation = new PluginFieldsLabelTranslation();
@@ -39,4 +38,5 @@ if (isset($_POST['add'])) {
 } elseif (isset($_POST['purge'])) {
     $translation->delete($_POST, true);
 }
+
 Html::back();

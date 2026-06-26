@@ -31,6 +31,7 @@
 class PluginFieldsDropdown
 {
     public static $rightname  = 'dropdown';
+
     public $can_be_translated = true;
 
     /**
@@ -53,18 +54,18 @@ class PluginFieldsDropdown
         foreach ($fields as $field) {
             //First, drop old fields from plugin directories
             $class_filename = $field['name'] . 'dropdown.class.php';
-            if (file_exists(PLUGINFIELDS_DIR . "/inc/$class_filename")) {
-                unlink(PLUGINFIELDS_DIR . "/inc/$class_filename");
+            if (file_exists(PLUGINFIELDS_DIR . ('/inc/' . $class_filename))) {
+                unlink(PLUGINFIELDS_DIR . ('/inc/' . $class_filename));
             }
 
             $front_filename = $field['name'] . 'dropdown.php';
-            if (file_exists(PLUGINFIELDS_DIR . "/front/$front_filename")) {
-                unlink(PLUGINFIELDS_DIR . "/front/$front_filename");
+            if (file_exists(PLUGINFIELDS_DIR . ('/front/' . $front_filename))) {
+                unlink(PLUGINFIELDS_DIR . ('/front/' . $front_filename));
             }
 
             $form_filename = $field['name'] . 'dropdown.form.php';
-            if (file_exists(PLUGINFIELDS_DIR . "/front/$form_filename")) {
-                unlink(PLUGINFIELDS_DIR . "/front/$form_filename");
+            if (file_exists(PLUGINFIELDS_DIR . ('/front/' . $form_filename))) {
+                unlink(PLUGINFIELDS_DIR . ('/front/' . $form_filename));
             }
         }
 
@@ -76,6 +77,7 @@ class PluginFieldsDropdown
 
         // Regenerate files and install missing tables
         $migration->displayMessage(__('Updating generated dropdown files', 'fields'));
+
         $obj    = new PluginFieldsField();
         $fields = $obj->find(['type' => 'dropdown']);
         foreach ($fields as $field) {
@@ -92,7 +94,7 @@ class PluginFieldsDropdown
 
         //remove dropdown tables and files
         if ($DB->tableExists('glpi_plugin_fields_fields')) {
-            require_once 'field.class.php';
+            require_once __DIR__ . '/field.class.php';
             $field     = new PluginFieldsField();
             $dropdowns = $field->find(['type' => 'dropdown']);
             foreach ($dropdowns as $dropdown) {
@@ -111,6 +113,7 @@ class PluginFieldsDropdown
             return false;
         }
 
+        // Safe inputs
         $input['name'] = PluginFieldsToolbox::sanitizeLabel((string) $input['name']);
         $input['id'] = (int) PluginFieldsToolbox::sanitizeLabel((string) $input['id']);
         $input['label'] = PluginFieldsToolbox::sanitizeLabel((string) $input['label']);
@@ -131,7 +134,7 @@ class PluginFieldsDropdown
         $class_filename = basename((string) $input['name']) . 'dropdown.class.php';
         if (
             file_put_contents(
-                PLUGINFIELDS_CLASS_PATH . "/$class_filename",
+                PLUGINFIELDS_CLASS_PATH . ('/' . $class_filename),
                 $template_class,
             ) === false
         ) {
@@ -140,47 +143,6 @@ class PluginFieldsDropdown
             return false;
         }
 
-        //get front template
-        $template_front = file_get_contents(PLUGINFIELDS_DIR . '/templates/dropdown.tpl');
-        if ($template_front === false) {
-            Toolbox::logDebug('Error : get dropdown front template error');
-
-            return false;
-        }
-
-        //create dropdown front file
-        $template_front = str_replace('%%CLASSNAME%%', $classname, $template_front);
-        $front_filename = $input['name'] . 'dropdown.php';
-        if (
-            file_put_contents(
-                PLUGINFIELDS_FRONT_PATH . "/$front_filename",
-                $template_front,
-            ) === false
-        ) {
-            Toolbox::logDebug("Error : dropdown front file creation - $class_filename");
-
-            return false;
-        }
-
-        //get form template
-        $template_form = file_get_contents(PLUGINFIELDS_DIR . '/templates/dropdown.form.tpl');
-        if ($template_form === false) {
-            return false;
-        }
-
-        //create dropdown form file
-        $template_form = str_replace('%%CLASSNAME%%', $classname, $template_form);
-        $form_filename = $input['name'] . 'dropdown.form.php';
-        if (
-            file_put_contents(
-                PLUGINFIELDS_FRONT_PATH . "/$form_filename",
-                $template_form,
-            ) === false
-        ) {
-            Toolbox::logDebug('Error : get dropdown form template error');
-
-            return false;
-        }
 
         //load class manually on plugin installation
         if (!class_exists($classname)) {
@@ -213,32 +175,23 @@ class PluginFieldsDropdown
         }
 
         //remove class file for this dropdown
-        if (file_exists($class_filename)) {
-            if (unlink($class_filename) === false) {
-                Toolbox::logInFile('php-errors', 'Error : dropdown class file creation - ' . $dropdown_name . 'dropdown.class.php');
-
-                return false;
-            }
+        if (file_exists($class_filename) && unlink($class_filename) === false) {
+            Toolbox::logInFile('php-errors', 'Error : dropdown class file creation - ' . $dropdown_name . 'dropdown.class.php');
+            return false;
         }
 
         //remove front file for this dropdown
         $front_filename = PLUGINFIELDS_FRONT_PATH . '/' . $dropdown_name . 'dropdown.php';
-        if (file_exists($front_filename)) {
-            if (unlink($front_filename) === false) {
-                Toolbox::logInFile('php-errors', 'Error : dropdown front file removing - ' . $dropdown_name . 'dropdown.php');
-
-                return false;
-            }
+        if (file_exists($front_filename) && unlink($front_filename) === false) {
+            Toolbox::logInFile('php-errors', 'Error : dropdown front file removing - ' . $dropdown_name . 'dropdown.php');
+            return false;
         }
 
         //remove front.form file for this dropdown
         $form_filename = PLUGINFIELDS_FRONT_PATH . '/' . $dropdown_name . 'dropdown.form.php';
-        if (file_exists($form_filename)) {
-            if (unlink($form_filename) === false) {
-                Toolbox::logInFile('php-errors', 'Error : dropdown form file removing - ' . $dropdown_name . 'dropdown.form.php');
-
-                return false;
-            }
+        if (file_exists($form_filename) && unlink($form_filename) === false) {
+            Toolbox::logInFile('php-errors', 'Error : dropdown form file removing - ' . $dropdown_name . 'dropdown.form.php');
+            return false;
         }
 
         return true;
@@ -246,12 +199,12 @@ class PluginFieldsDropdown
 
     public static function getClassname($system_name)
     {
-        return 'PluginFields' . ucfirst($system_name) . 'Dropdown';
+        return 'PluginFields' . ucfirst((string) $system_name) . 'Dropdown';
     }
 
     public static function multipleDropdownAddWhere($link, $tablefield, $field, $val, $searchtype, $field_field = [])
     {
-        /** @var \DBmysql $DB */
+        /** @var DBmysql $DB */
         global $DB;
 
         // Determines the default value
@@ -266,7 +219,7 @@ class PluginFieldsDropdown
         $operator = ($searchtype === 'equals') ? '' : 'NOT ';
         $condition = ($val == '0')
             ? $operator . 'IN("", "[]")'
-            : $operator . 'LIKE ' . $DB->quoteValue("%\"$val\"%");
+            : $operator . 'LIKE ' . $DB->quoteValue(sprintf('%%"%s"%%', $val));
 
         return $sqlBase . ' ' . $condition;
     }

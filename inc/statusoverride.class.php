@@ -27,14 +27,15 @@
  * @link      https://github.com/pluginsGLPI/fields
  * -------------------------------------------------------------------------
  */
-
 use Glpi\Application\View\TemplateRenderer;
+use Glpi\Features\Clonable;
 
 class PluginFieldsStatusOverride extends CommonDBChild
 {
-    use Glpi\Features\Clonable;
+    use Clonable;
 
     public static $itemtype = PluginFieldsField::class;
+
     public static $items_id = 'plugin_fields_fields_id';
 
     /**
@@ -59,7 +60,7 @@ class PluginFieldsStatusOverride extends CommonDBChild
         if (!$DB->tableExists($table)) {
             $migration->displayMessage(sprintf(__('Installing %s'), $table));
 
-            $query = "CREATE TABLE IF NOT EXISTS `$table` (
+            $query = "CREATE TABLE IF NOT EXISTS `{$table}` (
                   `id`                                INT            {$default_key_sign} NOT NULL auto_increment,
                   `plugin_fields_fields_id`           INT            {$default_key_sign} NOT NULL DEFAULT '0',
                   `itemtype`                          VARCHAR(100)   DEFAULT NULL,
@@ -69,7 +70,7 @@ class PluginFieldsStatusOverride extends CommonDBChild
                   PRIMARY KEY                         (`id`),
                   KEY `plugin_fields_fields_id`       (`plugin_fields_fields_id`)
                ) ENGINE=InnoDB DEFAULT CHARSET={$default_charset} COLLATE={$default_collation} ROW_FORMAT=DYNAMIC;";
-            $DB->doQuery($query) or die($DB->error());
+            $DB->doQuery($query);
         }
 
         return true;
@@ -93,8 +94,14 @@ class PluginFieldsStatusOverride extends CommonDBChild
     public function getTabNameForItem(CommonGLPI $item, $withtemplate = 0)
     {
         if ($item instanceof CommonDBTM) {
-            return self::createTabEntry(self::getTypeName(), self::countOverridesForContainer($item->getID()));
+            return self::createTabEntry(
+                self::getTypeName(),
+                self::countOverridesForContainer($item->getID()),
+                null,
+                'ti ti-adjustments-alt',
+            );
         }
+
         return '';
     }
 
@@ -131,8 +138,9 @@ class PluginFieldsStatusOverride extends CommonDBChild
     public function post_getFromDB()
     {
         if (isset($this->fields['states']) && !empty($this->fields['states'])) {
-            $this->fields['states'] = json_decode($this->fields['states']);
+            $this->fields['states'] = json_decode((string) $this->fields['states']);
         }
+
         parent::post_getFromDB();
     }
 
@@ -210,9 +218,10 @@ class PluginFieldsStatusOverride extends CommonDBChild
 
         $overrides = [];
         foreach ($iterator as $data) {
-            $data['states'] = !empty($data['states']) ? json_decode($data['states']) : [];
+            $data['states'] = empty($data['states']) ? [] : json_decode((string) $data['states']);
             $overrides[]    = $data;
         }
+
         self::addStatusNames($overrides);
 
         return $overrides;
@@ -245,12 +254,10 @@ class PluginFieldsStatusOverride extends CommonDBChild
 
         $overrides = self::getOverridesForContainer($container_id);
 
-        return array_filter($overrides, static function ($override) use ($itemtype, $status) {
-            return $override['itemtype'] === $itemtype && in_array($status, $override['states'], false);
-        });
+        return array_filter($overrides, static fn($override) => $override['itemtype'] === $itemtype && in_array($status, $override['states'], false));
     }
 
-    private static function getItemtypesForContainer(int $container_id): array
+    private function getItemtypesForContainer(int $container_id): array
     {
         /** @var DBmysql $DB */
         global $DB;
@@ -263,14 +270,12 @@ class PluginFieldsStatusOverride extends CommonDBChild
             ],
         ]);
 
-        if (count($iterator)) {
+        if (count($iterator) > 0) {
             $itemtypes        = $iterator->current()['itemtypes'];
             $itemtypes        = importArrayFromDB($itemtypes);
             $status_itemtypes = self::getStatusItemtypes();
             // Get only itemtypes that exist and have a status field
-            $itemtypes = array_filter($itemtypes, static function ($itemtype) use ($status_itemtypes) {
-                return class_exists($itemtype) && in_array($itemtype, $status_itemtypes, true);
-            });
+            $itemtypes = array_filter($itemtypes, static fn($itemtype) => class_exists($itemtype) && in_array($itemtype, $status_itemtypes, true));
             $results = [];
             foreach ($itemtypes as $itemtype) {
                 $results[$itemtype] = $itemtype::getTypeName();
@@ -318,6 +323,7 @@ class PluginFieldsStatusOverride extends CommonDBChild
         foreach ($iterator as $row) {
             $statuses['Project'][$row['id']] = $row['name'];
         }
+
         $statuses['ProjectTask'] = $statuses['Project'];
 
         $iterator = $DB->request([
@@ -330,13 +336,11 @@ class PluginFieldsStatusOverride extends CommonDBChild
 
         foreach ($overrides as &$override) {
             $names                    = $statuses[$override['itemtype']] ?? $statuses['Other'];
-            $override['status_names'] = array_filter($names, static function ($name, $id) use ($override) {
-                return in_array($id, $override['states']);
-            }, ARRAY_FILTER_USE_BOTH);
+            $override['status_names'] = array_filter($names, static fn($name, $id) => in_array($id, $override['states']), ARRAY_FILTER_USE_BOTH);
         }
     }
 
-    private static function getFieldsChoiceForContainer(int $container_id): array
+    private function getFieldsChoiceForContainer(int $container_id): array
     {
         /** @var DBmysql $DB */
         global $DB;
@@ -392,6 +396,7 @@ class PluginFieldsStatusOverride extends CommonDBChild
                 foreach ($iterator as $data) {
                     $statuses[] = $data['name'];
                 }
+
                 break;
             default:
                 return State::dropdown([
@@ -414,6 +419,7 @@ class PluginFieldsStatusOverride extends CommonDBChild
         if (!($item instanceof CommonDBTM)) {
             return;
         }
+
         $container_id = $item->getID();
         $has_fields   = countElementsInTable(PluginFieldsField::getTable(), [
             'plugin_fields_containers_id' => $container_id,
@@ -433,8 +439,8 @@ class PluginFieldsStatusOverride extends CommonDBChild
         $twig_params = [
             'override'            => $this,
             'container_id'        => $container_id,
-            'container_itemtypes' => self::getItemtypesForContainer($container_id),
-            'container_fields'    => self::getFieldsChoiceForContainer($container_id),
+            'container_itemtypes' => $this->getItemtypesForContainer($container_id),
+            'container_fields'    => $this->getFieldsChoiceForContainer($container_id),
         ];
         TemplateRenderer::getInstance()->display('@fields/forms/status_override.html.twig', $twig_params);
 
