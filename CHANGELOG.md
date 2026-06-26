@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.21.29] - 2026-04-16
+
+- Fix application of the read-only option on RichText fields.
+- Fix loading of default value for RichText fields.
+- Fix container tab label translation
+
 ## [1.21.28] - 2026-02-16
 
 - Fix template generation
@@ -18,6 +24,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Fixed
 
 - Fix the value of `id_search_option` in the log table when updating a dropdown field
+- Fix `CVE-2026-23489`
 
 ## [1.21.25] - 2025-11-20
 
