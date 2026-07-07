@@ -1011,8 +1011,10 @@ class PluginFieldsField extends CommonDBChild
                         var multiple_matches = item.name.match(/^(.+)\[\]$/);
                         if (multiple_matches) {
                             var name = multiple_matches[1];
-                            if (!(name in obj)) {
+                            if (!(name in obj) || obj[name] == "") {
                                 obj[name] = [];
+                            } else if (!Array.isArray(obj[name])) {
+                                obj[name] = [obj[name]];
                             }
                             obj[name].push(item.value);
                         } else {
@@ -1281,6 +1283,18 @@ JAVASCRIPT,
                 // -> Decode it only if it is not already an array.
                 $decoded = json_decode((string) $value, true);
                 $value = is_array($decoded) ? $decoded : [];
+            }
+
+            if ($field['multiple'] && is_array($value)) {
+                // Flatten any nested arrays caused by corrupted DB data (double-encoded values)
+                // so that Dropdown::show() always receives a flat list of scalars.
+                $value = array_values(array_filter(
+                    array_merge(...array_map(
+                        static fn($v) => is_array($v) ? array_values($v) : [$v],
+                        $value,
+                    )),
+                    is_scalar(...),
+                ));
             }
 
             $field['value'] = $value;

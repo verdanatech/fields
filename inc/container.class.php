@@ -209,8 +209,9 @@ class PluginFieldsContainer extends CommonDBTM
                 $container_class = new self();
                 foreach ($result as $container) {
                     self::generateTemplate($container);
+                    $container_name = $container['name'];
                     foreach (json_decode((string) $container['itemtypes']) as $itemtype) {
-                        $classname = self::getClassname($itemtype, $container["name"]);
+                        $classname = self::getClassname($itemtype, $container['name']);
                         // prevent usage of plugin class if not loaded
                         if (!class_exists($classname)) {
                             continue;
@@ -223,7 +224,13 @@ class PluginFieldsContainer extends CommonDBTM
                             && isset($migration_genericobject_itemtype[$itemtype])
                             && str_contains($old_table, 'glpi_plugin_fields_plugingenericobject' . $migration_genericobject_itemtype[$itemtype]['genericobject_name'])
                         ) {
-                            $new_table = str_replace('plugingenericobject' . $migration_genericobject_itemtype[$itemtype]['genericobject_name'], 'glpicustomasset' . strtolower($migration_genericobject_itemtype[$itemtype]['name']), $old_table);
+                            $new_itemtype = $migration_genericobject_itemtype[$itemtype]['itemtype'];
+                            // Limit table names to 64 chars (MySQL limit)
+                            while (strlen(getTableForItemType(self::getClassname($new_itemtype, $container_name))) > 64) {
+                                $container_name = substr((string) $container_name, 0, -1);
+                            }
+
+                            $new_table = getTableForItemType(self::getClassname($new_itemtype, $container_name));
                             $migration->renameTable($old_table, $new_table);
                         }
                     }
@@ -231,12 +238,15 @@ class PluginFieldsContainer extends CommonDBTM
                     // Update old genericobject itemtypes in container
                     $map = array_column($migration_genericobject_itemtype, 'itemtype', 'genericobject_itemtype');
                     $itemtypes = strtr($container['itemtypes'], $map);
-                    $container_class->update(
-                        [
-                            'id'         => $container['id'],
-                            'itemtypes'  => $itemtypes,
-                        ],
-                    );
+                    $update_data = [
+                        'id'        => $container['id'],
+                        'itemtypes' => $itemtypes,
+                    ];
+                    if ($container_name !== $container['name']) {
+                        $update_data['name'] = $container_name;
+                    }
+
+                    $container_class->update($update_data);
                 }
             } else {
                 throw new RuntimeException(
@@ -635,9 +645,15 @@ class PluginFieldsContainer extends CommonDBTM
         return $ong;
     }
 
+
+    public function prepareInputForUpdate($input)
+    {
+        return PluginFieldsToolbox::prepareLabel($input);
+    }
+
     public function prepareInputForAdd($input)
     {
-        if (!isset($input['itemtypes'])) {
+        if (empty($input['itemtypes'])) {
             Session::AddMessageAfterRedirect(
                 __(
                     'You cannot add block without associated element type',
@@ -686,8 +702,7 @@ class PluginFieldsContainer extends CommonDBTM
             }
         }
 
-        $toolbox       = new PluginFieldsToolbox();
-        $input['name'] = $toolbox->getSystemNameFromLabel($input['label']);
+        $input = PluginFieldsToolbox::prepareLabel($input);
 
         //reject adding when container name is too long for mysql table name
         foreach ($input['itemtypes'] as $itemtype) {
@@ -1086,6 +1101,7 @@ HTML;
                 'multiple'            => !$is_domtab,
                 'width'               => 200,
                 'display_emptychoice' => $is_domtab,
+                'required'            => true,
             ],
         );
 
@@ -1135,7 +1151,7 @@ HTML;
                     // For delete <sup class='tab_nb'>number</sup> :
                     foreach ($tabs as &$value) {
                         $results = [];
-                        if (preg_match_all('#<sup.*>(.+)</sup>#', $value, $results)) {
+                        if (preg_match_all('#<sup.*>(.+)</sup>#', (string) $value, $results)) {
                             $value = str_replace($results[0][0], '', $value);
                         }
                     }
@@ -1403,11 +1419,12 @@ HTML;
                     // Add new values to existing ones
                     $existing_values = json_decode($obj->fields[$field_name] ?? '[]', true);
                     $new_values      = is_array($data[$field_name]) ? $data[$field_name] : [$data[$field_name]];
+                    $new_values      = $this->flattenScalars($new_values);
                     $data[$field_name] = json_encode(array_values(array_unique(array_merge($existing_values, $new_values))));
 
                 } else {
                     $value = $data[$field_name];
-                    $value = is_array($value) ? $value : [];
+                    $value = is_array($value) ? $this->flattenScalars($value) : [];
                     $data[$field_name] = json_encode($value);
                 }
             } elseif (array_key_exists('_' . $field_name . '_defined', $data)) {
@@ -1583,7 +1600,7 @@ HTML;
             //for all change find searchoption
             foreach ($updates as $key => $changes) {
                 foreach ($searchoptions as $id_search_option => $searchoption) {
-                    if ($searchoption['field'] == $key) {
+                    if ($searchoption['field'] == $key || $searchoption['linkfield'] == $key) {
                         $changes[0] = $id_search_option;
 
                         if ($searchoption['datatype'] === 'dropdown') {
@@ -1756,9 +1773,6 @@ HTML;
             ['type'     => $type],
         ];
 
-        $entity = $_SESSION['glpiactiveentities'] ?? 0;
-        $condition += getEntitiesRestrictCriteria('', '', $entity, true, true);
-
         if ($subtype != '') {
             if ($subtype == $itemtype . '$main') {
                 $condition[] = ['type' => 'dom'];
@@ -1777,7 +1791,7 @@ HTML;
 
         foreach ($itemtypes as $data) {
             $dataitemtypes = PluginFieldsToolbox::decodeJSONItemtypes($data['itemtypes']);
-            if (in_array($itemtype, $dataitemtypes)) {
+            if (in_array($itemtype, $dataitemtypes) && Session::haveAccessToEntity($data['entities_id'], $data['is_recursive'])) {
                 $id = $data['id'];
             }
         }
@@ -1797,9 +1811,6 @@ HTML;
     {
         $condition = ['is_active' => 1];
 
-        $entity = $_SESSION['glpiactiveentities'] ?? 0;
-        $condition += getEntitiesRestrictCriteria('', '', $entity, true, true);
-
         $container = new PluginFieldsContainer();
         $itemtypes = $container->find($condition);
 
@@ -1810,7 +1821,7 @@ HTML;
         $ids = [];
         foreach ($itemtypes as $data) {
             $dataitemtypes = PluginFieldsToolbox::decodeJSONItemtypes($data['itemtypes']);
-            if (in_array($itemtype, $dataitemtypes)) {
+            if (in_array($itemtype, $dataitemtypes) && Session::haveAccessToEntity($data['entities_id'], $data['is_recursive'])) {
                 $id = $data['id'];
                 //profiles restriction
                 if (isset($_SESSION['glpiactiveprofile']['id']) && $_SESSION['glpiactiveprofile']['id'] != null && $id > 0) {
@@ -1960,6 +1971,22 @@ HTML;
         }
 
         return false;
+    }
+
+    /**
+     * Flatten a one-level-deep array of mixed scalars/arrays into a flat array of scalars.
+     *
+     * @param array<mixed, mixed> $values
+     * @return array<mixed, mixed> $values the flattened array with only scalar values
+     */
+    private function flattenScalars(array $values): array
+    {
+        $flat = [];
+        foreach ($values as $v) {
+            array_push($flat, ...(is_array($v) ? $v : [$v]));
+        }
+
+        return array_values(array_filter($flat, is_scalar(...)));
     }
 
     /**
@@ -2213,6 +2240,7 @@ HTML;
                 case 'date':
                 case 'datetime':
                     $opt[$i]['datatype'] = $data['type'];
+                    $opt[$i]['maybefuture'] = true;
                     break;
                 case 'url':
                     $opt[$i]['datatype'] = 'weblink';

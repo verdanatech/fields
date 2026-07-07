@@ -4,7 +4,7 @@
 
 namespace Composer\Autoload;
 
-class ComposerStaticInitaf5be338ce2c5e21875a5e8d8fb63e22
+class ComposerStaticInitbad011ca3a9a9c1776c1e7cc4b1e6d85
 {
     public static $files = array (
         '6e3fae29631ef280660b3cdad06f25a8' => __DIR__ . '/..' . '/symfony/deprecation-contracts/function.php',
@@ -41,6 +41,7 @@ class ComposerStaticInitaf5be338ce2c5e21875a5e8d8fb63e22
         'Symfony\\Component\\Yaml\\Exception\\RuntimeException' => __DIR__ . '/..' . '/symfony/yaml/Exception/RuntimeException.php',
         'Symfony\\Component\\Yaml\\Inline' => __DIR__ . '/..' . '/symfony/yaml/Inline.php',
         'Symfony\\Component\\Yaml\\Parser' => __DIR__ . '/..' . '/symfony/yaml/Parser.php',
+        'Symfony\\Component\\Yaml\\ParserState' => __DIR__ . '/..' . '/symfony/yaml/ParserState.php',
         'Symfony\\Component\\Yaml\\Tag\\TaggedValue' => __DIR__ . '/..' . '/symfony/yaml/Tag/TaggedValue.php',
         'Symfony\\Component\\Yaml\\Unescaper' => __DIR__ . '/..' . '/symfony/yaml/Unescaper.php',
         'Symfony\\Component\\Yaml\\Yaml' => __DIR__ . '/..' . '/symfony/yaml/Yaml.php',
@@ -50,9 +51,9 @@ class ComposerStaticInitaf5be338ce2c5e21875a5e8d8fb63e22
     public static function getInitializer(ClassLoader $loader)
     {
         return \Closure::bind(function () use ($loader) {
-            $loader->prefixLengthsPsr4 = ComposerStaticInitaf5be338ce2c5e21875a5e8d8fb63e22::$prefixLengthsPsr4;
-            $loader->prefixDirsPsr4 = ComposerStaticInitaf5be338ce2c5e21875a5e8d8fb63e22::$prefixDirsPsr4;
-            $loader->classMap = ComposerStaticInitaf5be338ce2c5e21875a5e8d8fb63e22::$classMap;
+            $loader->prefixLengthsPsr4 = ComposerStaticInitbad011ca3a9a9c1776c1e7cc4b1e6d85::$prefixLengthsPsr4;
+            $loader->prefixDirsPsr4 = ComposerStaticInitbad011ca3a9a9c1776c1e7cc4b1e6d85::$prefixDirsPsr4;
+            $loader->classMap = ComposerStaticInitbad011ca3a9a9c1776c1e7cc4b1e6d85::$classMap;
 
         }, null, ClassLoader::class);
     }
