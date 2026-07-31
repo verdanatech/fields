@@ -28,10 +28,22 @@
  * -------------------------------------------------------------------------
  */
 
-include '../../../inc/includes.php';
-Session::checkLoginUser();
-if (preg_match('/[a-z]/i', $_REQUEST['ddtype']) !== 1) {
-    throw new \RuntimeException(sprintf('Invalid itemtype "%1$s"', $_REQUEST['ddtype']));
+use Glpi\Form\QuestionType\QuestionTypeCategoryInterface;
+
+class PluginFieldsQuestionTypeCategory implements QuestionTypeCategoryInterface
+{
+    public function getLabel(): string
+    {
+        return PluginFieldsField::getTypeName(1);
+    }
+
+    public function getIcon(): string
+    {
+        return 'ti ti-list-check';
+    }
+
+    public function getWeight(): int
+    {
+        return 1000;
+    }
 }
-$path = PLUGINFIELDS_FRONT_PATH . '/' . $_REQUEST['ddtype'] . '.php';
-require_once $path;

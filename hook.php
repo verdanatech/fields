@@ -41,12 +41,14 @@ function plugin_fields_install()
     if ($memory_limit > 0 && $memory_limit < (512 * 1024 * 1024)) {
         ini_set('memory_limit', '512M');
     }
+
     if ($max_execution_time > 0 && $max_execution_time < 300) {
         ini_set('max_execution_time', '300');
     }
 
     $plugin_fields = new Plugin();
     $plugin_fields->getFromDBbyDir('fields');
+
     $version = $plugin_fields->fields['version'];
 
 
@@ -72,12 +74,14 @@ function plugin_fields_install()
         PluginFieldsStatusOverride::class,
     ];
 
+
     // First, install base data
     foreach ($classesToInstall as $class) {
         if (method_exists($class, 'installBaseData')) {
             $class::installBaseData($migration, $version);
         }
     }
+
     $migration->executeMigration();
 
     // Then process specific user classes/tables
@@ -86,6 +90,7 @@ function plugin_fields_install()
             $class::installUserData($migration, $version);
         }
     }
+
     $migration->executeMigration();
 
     if (!isCommandLine()) {
@@ -137,10 +142,10 @@ function plugin_fields_uninstall()
     foreach ($classesToUninstall as $class) {
         if ($plug = isPluginItemType($class)) {
             $dir  = PLUGINFIELDS_DIR . '/inc/';
-            $item = strtolower($plug['class']);
+            $item = strtolower((string) $plug['class']);
 
-            if (file_exists("$dir$item.class.php")) {
-                include_once("$dir$item.class.php");
+            if (file_exists(sprintf('%s%s.class.php', $dir, $item))) {
+                include_once(sprintf('%s%s.class.php', $dir, $item));
                 if (!call_user_func([$class, 'uninstall'])) {
                     return false;
                 }
@@ -160,6 +165,12 @@ function plugin_fields_uninstall()
         'itemtype' => ['LIKE' , 'PluginFields%'],
     ]);
 
+    // clean configuration values
+    $config = new Config();
+    $config->deleteByCriteria([
+        'context' => 'plugin:fields',
+    ]);
+
     return true;
 }
 
@@ -168,7 +179,7 @@ function plugin_fields_getAddSearchOptions($itemtype)
     if (
         isset($_SESSION['glpiactiveentities'])
         && is_array($_SESSION['glpiactiveentities'])
-        && count($_SESSION['glpiactiveentities']) > 0
+        && $_SESSION['glpiactiveentities'] !== []
     ) {
         $itemtypes = PluginFieldsContainer::getEntries('all');
         if (in_array($itemtype, $itemtypes)) {
@@ -189,7 +200,7 @@ function plugin_fields_getDropdown()
     foreach ($fields as $field) {
         $field['itemtype']                                                = PluginFieldsField::getType();
         $label                                                            = PluginFieldsLabelTranslation::getLabelFor($field);
-        $dropdowns['PluginFields' . ucfirst($field['name']) . 'Dropdown'] = $label;
+        $dropdowns['PluginFields' . ucfirst((string) $field['name']) . 'Dropdown'] = $label;
     }
 
     asort($dropdowns);
@@ -206,7 +217,7 @@ function plugin_fields_MassiveActionsFieldsDisplay($options = [])
     $itemtypes = PluginFieldsContainer::getEntries('all');
 
     if (in_array($options['itemtype'], $itemtypes)) {
-        if ($options['options']['is_multiple']) {
+        if (isset($options['options']['is_multiple']) && $options['options']['is_multiple']) {
             Dropdown::showFromArray(
                 'multiple_dropdown_action',
                 [
@@ -239,18 +250,15 @@ function plugin_fields_getRuleActions($params = [])
 {
     $actions = [];
 
-    switch ($params['rule_itemtype']) {
-        case 'PluginFusioninventoryTaskpostactionRule':
-            $options = PluginFieldsContainer::getAddSearchOptions('Computer');
-            foreach ($options as $option) {
-                $actions[$option['linkfield']]['name'] = $option['name'];
-                $actions[$option['linkfield']]['type'] = $option['pfields_type'];
-                if ($option['pfields_type'] == 'dropdown') {
-                    $actions[$option['linkfield']]['table'] = $option['table'];
-                }
+    if ($params['rule_itemtype'] === 'PluginFusioninventoryTaskpostactionRule') {
+        $options = PluginFieldsContainer::getAddSearchOptions('Computer');
+        foreach ($options as $option) {
+            $actions[$option['linkfield']]['name'] = $option['name'];
+            $actions[$option['linkfield']]['type'] = $option['pfields_type'];
+            if ($option['pfields_type'] == 'dropdown') {
+                $actions[$option['linkfield']]['table'] = $option['table'];
             }
-
-            break;
+        }
     }
 
     return $actions;
@@ -309,15 +317,15 @@ function plugin_fields_rule_matched($params = [])
 
 function plugin_fields_giveItem($itemtype, $ID, $data, $num)
 {
-    $searchopt = &Search::getOptions($itemtype);
+    $searchopt = Search::getOptions($itemtype);
     $table     = $searchopt[$ID]['table'];
 
     //fix glpi default Search::giveItem who for empty date display "--"
     if (
-        strpos($table, 'glpi_plugin_fields') !== false
+        str_contains((string) $table, 'glpi_plugin_fields')
         && isset($searchopt[$ID]['datatype'])
-        && strpos($searchopt[$ID]['datatype'], 'date') !== false
-        && empty($data['raw']["ITEM_$num"])
+        && str_contains($searchopt[$ID]['datatype'], 'date')
+        && empty($data['raw']['ITEM_' . $num])
     ) {
         return ' ';
     }
@@ -337,7 +345,7 @@ function plugin_datainjection_populate_fields()
     $container = new PluginFieldsContainer();
     $found     = $container->find(['is_active' => 1]);
     foreach ($found as $values) {
-        $types = json_decode($values['itemtypes']);
+        $types = PluginFieldsToolbox::decodeJSONItemtypes($values['itemtypes']);
 
         foreach ($types as $type) {
             $classname                    = PluginFieldsContainer::getClassname($type, $values['name'], 'Injection');
@@ -348,84 +356,86 @@ function plugin_datainjection_populate_fields()
 
 function plugin_fields_addWhere($link, $nott, $itemtype, $ID, $val, $searchtype)
 {
-    /** @var \DBmysql $DB */
+    /** @var DBmysql $DB */
     global $DB;
 
-    $searchopt    = &Search::getOptions($itemtype);
-    $table        = $searchopt[$ID]['table'];
-    $field        = $searchopt[$ID]['field'];
-    $pfields_type = $searchopt[$ID]['pfields_type'] ?? '';
+    $searchopt         = Search::getOptions($itemtype);
+    $table             = $searchopt[$ID]['table'];
+    $field             = $searchopt[$ID]['field'];
+    $pfields_fields_id = $searchopt[$ID]['pfields_fields_id'] ?? 0;
 
+    // Identify the field by its id (unique), not by its name: several containers
+    // can define a field with the same name, which would make a name-based lookup ambiguous.
     $field_field = new PluginFieldsField();
+    if (!$field_field->getFromDB($pfields_fields_id)) {
+        return null;
+    }
 
-    if (
-        $field_field->getFromDBByCrit(
-            [
-                'name'     => $field,
-                'type' => 'number',
-            ],
-        )
-        && $pfields_type == 'number'
-    ) {
-        // if 'number' field with name is found with searchtype 'equals' or 'notequals'
+    if ($field_field->fields['type'] === 'number') {
+        // if 'number' field with searchtype 'equals' or 'notequals'
         // update WHERE clause with `$table_$field.$field` because without `$table_$field.id` is used
         if ($searchtype == 'equals' || $searchtype == 'notequals') {
             $operator = ($searchtype == 'equals') ? '=' : '!=';
             if ($nott) {
-                $link = $link . ' NOT ';
+                $link .= ' NOT ';
             }
-            return $link . ' CAST(' . $DB->quoteName("$table" . '_' . "$field") . '.' . $DB->quoteName($field) . ' AS DECIMAL(10,7))' . $operator . ' ' . $DB->quoteValue($val) ;
+
+            return $link . ' CAST(' . $DB->quoteName($table . '_' . $field) . '.' . $DB->quoteName($field) . ' AS DECIMAL(10,7))' . $operator . ' ' . $DB->quoteValue($val);
         } else {
-            // if 'number' field with name is found with <= or >= or < or > search
+            // if 'number' field with <= or >= or < or > search
             // update WHERE clause with the correct operator
-            $val = html_entity_decode($val);
+            $val = html_entity_decode((string) $val);
             if (preg_match('/(<=|>=|>|<)/', $val, $matches)) {
                 $operator = $matches[1];
                 $val = trim(str_replace($operator, '', $val));
-                return $link . $DB->quoteName("$table" . '_' . "$field") . '.' . $DB->quoteName($field) . $operator . ' ' . $DB->quoteValue($val);
+                return $link . $DB->quoteName($table . '_' . $field) . '.' . $DB->quoteName($field) . $operator . ' ' . $DB->quoteValue($val);
             }
         }
     }
 
-    // if 'multiple' field with name is found -> 'Dropdown-XXXX' case
+    if (!$field_field->fields['multiple']) {
+        return null;
+    }
+
+    // 'Dropdown-XXXX' case: the searchopt field name is the plugin field name itself
     // update WHERE clause with LIKE statement
-    if (
-        $field_field->getFromDBByCrit(
-            [
-                'name'     => $field,
-                'multiple' => true,
-            ],
-        )
-    ) {
-        $tablefield = "$table" . '_' . "$field";
-        switch ($searchtype) {
-            case 'equals':
-                return PluginFieldsDropdown::multipleDropdownAddWhere($link, $tablefield, $field, $val, $nott ? 'notequals' : 'equals', $field_field);
-            case 'notequals':
-                return PluginFieldsDropdown::multipleDropdownAddWhere($link, $tablefield, $field, $val, $nott ? 'equals' : 'notequals', $field_field);
-        }
-    } else {
-        // if 'multiple' field with cleaned name is found -> 'dropdown' case
-        // update WHERE clause with LIKE statement
-        $cleanfield = str_replace('plugin_fields_', '', $field);
-        $cleanfield = str_replace('dropdowns_id', '', $cleanfield);
-        $tablefield = "$table" . '_' . "$cleanfield";
-        if (
-            $field_field->getFromDBByCrit(
-                [
-                    'name'     => $cleanfield,
-                    'multiple' => true,
-                ],
-            )
-        ) {
-            switch ($searchtype) {
-                case 'equals':
-                    return PluginFieldsDropdown::multipleDropdownAddWhere($link, $tablefield, $field, $val, $nott ? 'notequals' : 'equals', $field_field);
-                case 'notequals':
-                    return PluginFieldsDropdown::multipleDropdownAddWhere($link, $tablefield, $field, $val, $nott ? 'equals' : 'notequals', $field_field);
-            }
-        } else {
-            return false;
-        }
+    if (preg_match('/^dropdown-.+$/i', (string) $field_field->fields['type'])) {
+        $tablefield = $table . '_' . $field;
+        return match ($searchtype) {
+            'equals' => PluginFieldsDropdown::multipleDropdownAddWhere($link, $tablefield, $field, $val, $nott ? 'notequals' : 'equals', $field_field),
+            'notequals' => PluginFieldsDropdown::multipleDropdownAddWhere($link, $tablefield, $field, $val, $nott ? 'equals' : 'notequals', $field_field),
+            default => null,
+        };
+    }
+
+    // 'dropdown' case: the searchopt field name is mangled ("plugin_fields_<name>dropdowns_id"),
+    // recover the real field name to build the joined table alias
+    // update WHERE clause with LIKE statement
+    $cleanfield = str_replace('plugin_fields_', '', $field);
+    $cleanfield = str_replace('dropdowns_id', '', $cleanfield);
+
+    $tablefield = $table . '_' . $cleanfield;
+    return match ($searchtype) {
+        'equals' => PluginFieldsDropdown::multipleDropdownAddWhere($link, $tablefield, $field, $val, $nott ? 'notequals' : 'equals', $field_field),
+        'notequals' => PluginFieldsDropdown::multipleDropdownAddWhere($link, $tablefield, $field, $val, $nott ? 'equals' : 'notequals', $field_field),
+        default => null,
+    };
+}
+
+function plugin_item_transfer_fields(array $options): void
+{
+    $itemtype = $options['type'] ?? null;
+    $container_ids = PluginFieldsContainer::findAllContainers($itemtype);
+
+    $container = new PluginFieldsContainer();
+    foreach ($container_ids as $id) {
+        $container->getFromDB($id);
+        $data = [
+            'plugin_fields_containers_id' => $id,
+            'itemtype' => $itemtype,
+            'items_id' => $options['newID'],
+            'entities_id' => $options['entities_id'],
+        ];
+        $container->updateFieldsValues($data, $itemtype, true);
     }
 }

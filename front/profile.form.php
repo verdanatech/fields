@@ -28,10 +28,12 @@
  * -------------------------------------------------------------------------
  */
 
-include('../../../inc/includes.php');
+declare(strict_types=1);
+
 Session::checkRight('config', UPDATE);
 
 if (isset($_POST['update'])) {
     PluginFieldsProfile::updateProfile($_POST);
 }
+
 Html::back();

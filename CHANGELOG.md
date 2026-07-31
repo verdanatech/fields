@@ -5,33 +5,134 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## [1.21.29] - 2026-04-16
-
-- Fix application of the read-only option on RichText fields.
-- Fix loading of default value for RichText fields.
-- Fix container tab label translation
-
-## [1.21.28] - 2026-02-16
-
-- Fix template generation
-
-## [1.21.27] - 2026-02-12
-
-- Fix template generation error on update
-
-## [1.21.26] - 2026-02-12
+## [1.24.3] - 2026-07-30
 
 ### Fixed
 
-- Fix the value of `id_search_option` in the log table when updating a dropdown field
+- Fix a container creation bug that was allowing to link incompatible container types and object types
+- Fix missing right checks on some ajax config endpoints and escape default value and URL field output.
+- Fix item creation with null value for mandatory fields
+- Fix search crash when two containers share a dropdown field with the same name.
+- Fix handle native GLPI dropdown types when binding additional fields to form destination
+- Fix container name/label corruption during GenericObject migration, which could break the migration with a MySQL identifier-length error.
+- Fix GenericObject type dropdowns migration
+
+## [1.24.2] - 2026-06-30
+
+### Fixed
+
+- Make "Associated item type" mandatory when creating a container.
+
+## [1.24.1] - 2026-06-24
+
+### Fixed
+
+- Fix the name of dropdown fields in logs when updating an item
+- Fix plugin configuration deletion during uninstallation
+- Fix nested array stored in DB for readonly dropdown
+- Fix migration abort when a GenericObject container name produces a table name exceeding MySQL's 64-character limit after conversion to GlpiCustomAsset.
+- Fix empty dropdown value (-1) on form submission
+- Fix text area fields size and alignment
+- Optimize container loading when there are a large number of entities
+- Adding a verification in refreshContainer function for obj value which can be an empty string instead of an array
+- Fix refreshContainer crash when a field is serialized both as a scalar and as an array
+- Centralized label preparation and system name generation.
+
+## [1.24.0] - 2026-04-16
+
+### Added
+
+- Support for new value operators for “Field” question type linked to a field that is a dropdown in forms
+- Support for searching future dates and times in date/datetime fields
+
+### Fixed
+
+- Fix SQL warning when no user session is active during plugin init
+- Fix text area fields alignment
+- Fix error when submitting a form with an hidden question of type `Field`
+- Fixed a bug where a field was deleted when at least one question in a form was linked to another field
+
+## [1.23.4] - 2026-03-26
+
+### Fixed
+
+- Fix CRUD hooks to support the REST API regardless of session state
+- Fix SQL errors with custom dropdown fields
+- Fix wrong values displayed in massive actions when a form contains multiple custom dropdowns
+- Fix field entity during parent asset entity transfer
+
+## [1.23.3] - 2026-02-12
+
+### Added
+
+- Add compatibility with GLPI `CustomAsset`
+
+### Fixed
+
 - Fix `CVE-2026-23489`
+- Fix migration error caused by unknown itemtype in containers
+- Fix empty default value in multiple dropdown fields
 
-## [1.21.25] - 2025-11-20
+## [1.23.2] - 2025-12-22
+
+- Fix prevent failure when attempting to delete an actor
+- Fix form `path` for `tab` `container`
+- Fix error during Forms migration when block is not on root entity
+
+## [1.23.1] - 2025-11-20
+
+- Fix `add` operations when a linked object already exists before the plugin container fields are created.
+- Fix left side menu url (with `DIR_MARKETPLACE`)
+- Fix default value format for multiple dropdown (GLPIObject)
+- Fix bad SQL query for `GenericObject`
+- Fixed a bug that prevented the creation of additional field data for objects
+- Hide config menu if user does not have read permission
+
+## [1.23.0] - 2025-11-05
+
+### Added
+
+- Implement `Field` question type for new GLPI forms
+- Bind the answers to the `Field` question type to the corresponding additional fields
+- Update dropdowns layout/style for “GLPI Item” fields
 
 ### Fixed
 
-- Fix default value format for multiple dropdown (GLPIObject)
+- Align the fields of the plugin with the user form
+- Fix bad SQL query for `GenericObject`
+
+## [1.22.2] - 2025-10-24
+
+### Fixed
+
+- Fix `GenericObject` Model and Type migration
+- Fix `json_decode` using class with namespace
+- Fix drag and drop
 - Increased the maximum length of the language column to support longer locale codes
+- Fix left side menu url
+- Fix purge
+
+## [1.22.1] - 2025-10-10
+
+### Fixed
+
+- Fix UI with GLPI 11
+- Fix `tab` container not displayed
+
+## [1.22.0] - 2025-09-30
+
+### Added
+
+- GLPI 11 compatibility
+
+### Fixed
+
+- Fix  `massive action` for adding value to `multiple` dropdown fields
+- Fix for the `COALESCE` part of the `SQL query` for `multiple` dropdowns
+- Fix `search option` for `multiple` dropdown
+- Fix display from Planning view
+- Fix `classname` resolution when multiple `s` at end of container name
+
 
 ## [1.21.24] - 2025-10-10
 
@@ -42,6 +143,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 - Fix `search option` for `multiple` dropdown
 - Fix display from Planning view
 - Fix `classname` resolution when multiple `s` at end of container name
+
 
 ## [1.21.23] - 2025-08-26
 

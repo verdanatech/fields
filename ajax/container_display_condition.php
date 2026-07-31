@@ -27,9 +27,7 @@
  * @link      https://github.com/pluginsGLPI/fields
  * -------------------------------------------------------------------------
  */
-
-include('../../../inc/includes.php');
-Session::checkLoginUser();
+Session::checkRight('config', READ);
 
 if (isset($_GET['action'])) {
     if ($_GET['action'] === 'get_add_form') {
@@ -55,6 +53,5 @@ if (isset($_GET['action'])) {
         }
     }
 } else {
-    http_response_code(400);
-    die();
+    throw new RuntimeException('Invalid request', 400);
 }

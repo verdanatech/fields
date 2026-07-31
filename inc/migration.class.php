@@ -38,11 +38,7 @@ class PluginFieldsMigration extends Migration
     /**
      * Return SQL fields corresponding to given additionnal field.
      *
-     * @param string $field_name
-     * @param string $field_type
-     * @param array  $options
      *
-     * @return array
      */
     public static function getSQLFields(string $field_name, string $field_type, array $options = []): array
     {
@@ -58,11 +54,8 @@ class PluginFieldsMigration extends Migration
                 if ($field_type === 'dropdown') {
                     $field_name = getForeignKeyFieldForItemType(PluginFieldsDropdown::getClassname($field_name));
                 }
-                if ($options['multiple'] ?? false) {
-                    $fields[$field_name] = 'LONGTEXT';
-                } else {
-                    $fields[$field_name] = "INT {$default_key_sign} NOT NULL DEFAULT 0";
-                }
+
+                $fields[$field_name] = $options['multiple'] ?? false ? 'LONGTEXT' : sprintf('INT %s NOT NULL DEFAULT 0', $default_key_sign);
                 break;
             case $field_type === 'textarea':
             case $field_type === 'url':
@@ -76,7 +69,7 @@ class PluginFieldsMigration extends Migration
                 break;
             case $field_type === 'glpi_item':
                 $fields[sprintf('itemtype_%s', $field_name)] = 'varchar(100) DEFAULT NULL';
-                $fields[sprintf('items_id_%s', $field_name)] = "int {$default_key_sign} NOT NULL DEFAULT 0";
+                $fields[sprintf('items_id_%s', $field_name)] = sprintf('int %s NOT NULL DEFAULT 0', $default_key_sign);
                 break;
             case $field_type === 'date':
             case $field_type === 'datetime':
@@ -100,9 +93,7 @@ class PluginFieldsMigration extends Migration
      * should have been removed and list them.
      * If parameter $fix is true, fields are deleted from database.
      *
-     * @param bool $fix
      *
-     * @return array
      */
     public static function checkDeadFields(bool $fix): array
     {
@@ -124,7 +115,7 @@ class PluginFieldsMigration extends Migration
             // One table to handle per itemtype
             foreach ($itemtypes as $itemtype) {
                 // Build table name
-                $table = getTableForItemType("PluginFields{$itemtype}{$name}");
+                $table = getTableForItemType(sprintf('PluginFields%s%s', $itemtype, $name));
 
                 if (!$DB->tableExists($table)) {
                     // Missing table; skip (abnormal)
@@ -137,7 +128,7 @@ class PluginFieldsMigration extends Migration
                 // Compute which fields should be removed
                 $fields_to_drop = array_diff($found_fields, $valid_fields);
 
-                if (count($fields_to_drop) > 0) {
+                if ($fields_to_drop !== []) {
                     $dead_fields[$table] = $fields_to_drop;
                 }
             }
@@ -162,8 +153,6 @@ class PluginFieldsMigration extends Migration
      * Get all fields defined for a container in glpi_plugin_fields_fields
      *
      * @param int $container_id Id of the container
-     *
-     * @return array
      */
     private static function getValidFieldsForContainer(int $container_id): array
     {
@@ -184,12 +173,10 @@ class PluginFieldsMigration extends Migration
      * This means all fields found in the table expect those defined in
      * $basic_fields
      *
-     * @param string $table
      *
-     * @return array
      */
     private static function getCustomFieldsInContainerTable(
-        string $table
+        string $table,
     ): array {
         /** @var DBmysql $DB */
         global $DB;
@@ -210,9 +197,48 @@ class PluginFieldsMigration extends Migration
 
         return array_filter(
             $fields,
-            function (string $field) use ($basic_fields) {
-                return !in_array($field, $basic_fields);
-            },
+            fn(string $field) => !in_array($field, $basic_fields, true),
         );
+    }
+
+    public static function getGenericObjectTypes(): array
+    {
+        /** @var DBmysql $DB */
+        global $DB;
+
+        // Check GenericObject version
+        $genericobject_info = Plugin::getInfo('genericobject');
+        if (version_compare($genericobject_info['version'] ?? '0', '3.0.0', '<')) {
+            throw new RuntimeException(
+                'GenericObject plugin cannot be migrated. Please update it to the latest version.',
+            );
+        }
+
+        // Check glpi_plugin_genericobject_types table
+        if (!$DB->fieldExists('glpi_plugin_genericobject_types', 'itemtype')) {
+            throw new RuntimeException(
+                'Integrity error on the glpi_plugin_genericobject_types table from the GenericObject plugin.',
+            );
+        }
+
+        $migration_genericobject_itemtype = [];
+        $result = $DB->request(['FROM' => 'glpi_plugin_genericobject_types']);
+        foreach ($result as $type) {
+            $customasset_classname = 'Glpi\\\\CustomAsset\\\\' . $type['name'] . 'Asset';
+            if (str_ends_with((string) $type['itemtype'], 'Model')) {
+                $customasset_classname = 'Glpi\\\\CustomAsset\\\\' . $type['name'] . 'AssetModel';
+            } elseif (str_ends_with((string) $type['itemtype'], 'Type')) {
+                $customasset_classname = 'Glpi\\\\CustomAsset\\\\' . $type['name'] . 'AssetType';
+            }
+
+            $migration_genericobject_itemtype[$type['itemtype']] = [
+                'genericobject_itemtype' => $type['itemtype'],
+                'itemtype' => $customasset_classname,
+                'genericobject_name' => $type['name'],
+                'name' => $type['name'] . 'Asset',
+            ];
+        }
+
+        return $migration_genericobject_itemtype;
     }
 }

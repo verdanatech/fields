@@ -28,8 +28,9 @@
  * -------------------------------------------------------------------------
  */
 
-include('../../../inc/includes.php');
-include('../hook.php');
+declare(strict_types=1);
+
+include(__DIR__ . '/../hook.php');
 
 Session::checkRight('config', READ);
 

@@ -26,28 +26,74 @@
  * -------------------------------------------------------------------------
  */
 
-//config
+// config
 ul.fields_config li {
    cursor:pointer;
    float:left;
    width:20%;
-   -moz-border-radius: 5px;
-   -webkit-border-radius:5px;
    border-radius: 5px;
-   margin:0 1% 10px 1%;
+   margin:0 1% 10px;
    padding:5px 1px;
 }
+
 ul.fields_config li:hover {
    background-color:#E8E8E8;
 }
+
 ul.fields_config li p {
    padding-top: 8px;
 }
+
 ul.fields_config li img {
    float: left;
    margin-right: 2px;
 }
+
 div.fields_clear {
    clear: both;
    width:100%;
+}
+
+[data-glpi-form-editor-question-type-specific] .glpi-fields-plugin-question-type-glpi-item-field .select2-selection:first-of-type:not(:only-child) {
+   border-radius: 0;
+}
+
+.glpi-fields-plugin-glpi-item-field,
+.glpi-fields-plugin-glpi-item-field .field-container {
+   &:has(> span select[data-select2-id]) {
+      > span:first-of-type .select2-selection {
+         border-bottom-left-radius: 0;
+         border-bottom-right-radius: 0;
+      }
+
+      > span:not(:first-of-type) {
+         .glpi-fields-plugin-question-type-glpi-item-field {
+            width: 100%;
+         }
+
+         .select2-selection {
+            margin-top: calc(-1 * var(--tblr-border-width));
+            border-top-left-radius: 0;
+            border-top-right-radius: 0;
+         }
+
+         .dropdown_tooltip {
+            margin-top: calc(-1 * var(--tblr-border-width));
+
+            &:last-of-type {
+               border-bottom-right-radius: var(--tblr-border-radius);
+            }
+         }
+      }
+
+      > div:has([data-glpi-form-editor-question-type-fields-field-id-selector]) {
+         display: none;
+      }
+   }
+}
+
+.glpi-fields-plugin-question-type-glpi-destination-toggle {
+   .field-container > label {
+      margin-top: 0 !important;
+   }
 }

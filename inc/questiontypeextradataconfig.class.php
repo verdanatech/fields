@@ -28,10 +28,45 @@
  * -------------------------------------------------------------------------
  */
 
-include '../../../inc/includes.php';
-Session::checkLoginUser();
-if (preg_match('/[a-z]/i', $_REQUEST['ddtype']) !== 1) {
-    throw new \RuntimeException(sprintf('Invalid itemtype "%1$s"', $_REQUEST['ddtype']));
+use Glpi\DBAL\JsonFieldInterface;
+
+class PluginFieldsQuestionTypeExtraDataConfig implements JsonFieldInterface
+{
+    // Unique reference to hardcoded name used for serialization
+    public const BLOCK_ID = "block_id";
+
+    public const FIELD_ID = "field_id";
+
+    public function __construct(
+        private readonly ?int $block_id = null,
+        private readonly ?int $field_id = null,
+    ) {}
+
+    #[Override]
+    public static function jsonDeserialize(array $data): self
+    {
+        return new self(
+            block_id: $data[self::BLOCK_ID] ?? null,
+            field_id: $data[self::FIELD_ID] ?? null,
+        );
+    }
+
+    #[Override]
+    public function jsonSerialize(): array
+    {
+        return [
+            self::BLOCK_ID => $this->block_id,
+            self::FIELD_ID => $this->field_id,
+        ];
+    }
+
+    public function getBlockId(): ?int
+    {
+        return $this->block_id;
+    }
+
+    public function getFieldId(): ?int
+    {
+        return $this->field_id;
+    }
 }
-$path = PLUGINFIELDS_FRONT_PATH . '/' . $_REQUEST['ddtype'] . '.form.php';
-require_once $path;
