@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## [1.24.4] - 2026-08-06
+
+### Fixed
+
+- Fix an error displayed on the UI when trying to create a bloc display condition based on "Type" or "Model" fields for custom assets
+- Fix GenericObject dropdown fields never being migrated to CustomAsset dropdown fields
+
+## [1.24.3] - 2026-07-30
+
+### Fixed
+
+- Fix a container creation bug that was allowing to link incompatible container types and object types
+- Fix missing right checks on some ajax config endpoints and escape default value and URL field output.
+- Fix item creation with null value for mandatory fields
+- Fix search crash when two containers share a dropdown field with the same name.
+- Fix handle native GLPI dropdown types when binding additional fields to form destination
+- Fix container name/label corruption during GenericObject migration, which could break the migration with a MySQL identifier-length error.
+- Fix GenericObject type dropdowns migration
+
 ## [1.24.2] - 2026-06-30
 
 ### Fixed

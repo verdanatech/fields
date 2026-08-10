@@ -163,38 +163,7 @@ class PluginFieldsContainer extends CommonDBTM
 
             // Get itemtypes from PluginGenericobject
             if ($DB->tableExists('glpi_plugin_genericobject_types')) {
-                // Check GenericObject version
-                $genericobject_info = Plugin::getInfo('genericobject');
-                if (version_compare($genericobject_info['version'] ?? '0', '3.0.0', '<')) {
-                    throw new RuntimeException(
-                        'GenericObject plugin cannot be migrated. Please update it to the latest version.',
-                    );
-                }
-
-                // Check glpi_plugin_genericobject_types table
-                if (!$DB->fieldExists('glpi_plugin_genericobject_types', 'itemtype')) {
-                    throw new RuntimeException(
-                        'Integrity error on the glpi_plugin_genericobject_types table from the GenericObject plugin.',
-                    );
-                }
-
-                $migration_genericobject_itemtype = [];
-                $result = $DB->request(['FROM' => 'glpi_plugin_genericobject_types']);
-                foreach ($result as $type) {
-                    $customasset_classname = 'Glpi\\\\CustomAsset\\\\' . $type['name'] . 'Asset';
-                    if (str_ends_with((string) $type['itemtype'], 'Model')) {
-                        $customasset_classname = 'Glpi\\\\CustomAsset\\\\' . $type['name'] . 'AssetModel';
-                    } elseif (str_ends_with((string) $type['itemtype'], 'Type')) {
-                        $customasset_classname = 'Glpi\\\\CustomAsset\\\\' . $type['name'] . 'AssetType';
-                    }
-
-                    $migration_genericobject_itemtype[$type['itemtype']] = [
-                        'genericobject_itemtype' => $type['itemtype'],
-                        'itemtype' => $customasset_classname,
-                        'genericobject_name' => $type['name'],
-                        'name' => $type['name'] . 'Asset',
-                    ];
-                }
+                $migration_genericobject_itemtype = PluginFieldsMigration::getGenericObjectTypes();
 
                 // Get containers with PluginGenericobject itemtype
                 $result = $DB->request([
@@ -241,6 +210,7 @@ class PluginFieldsContainer extends CommonDBTM
                     $update_data = [
                         'id'        => $container['id'],
                         'itemtypes' => $itemtypes,
+                        'label'     => $container['label'],
                     ];
                     if ($container_name !== $container['name']) {
                         $update_data['name'] = $container_name;
@@ -648,7 +618,12 @@ class PluginFieldsContainer extends CommonDBTM
 
     public function prepareInputForUpdate($input)
     {
-        return PluginFieldsToolbox::prepareLabel($input);
+        // sanitize label only; name is intentionally left untouched here (see migration callers)
+        if (isset($input['label']) && !empty($input['label'])) {
+            $input['label'] = PluginFieldsToolbox::sanitizeLabel((string) $input['label']);
+        }
+
+        return $input;
     }
 
     public function prepareInputForAdd($input)
@@ -698,6 +673,15 @@ class PluginFieldsContainer extends CommonDBTM
                             return false;
                         }
                     }
+                }
+            }
+
+            $accepted_itemtypes = array_keys(array_merge(...array_values(self::getItemtypes(true))));
+            foreach ($input['itemtypes'] as $itemtype) {
+                if (!in_array($itemtype, $accepted_itemtypes)) {
+                    Session::AddMessageAfterRedirect(__("At least one selected object cannot be linked with type 'Insertion in the form of a specific tab'.", 'fields'), false, ERROR);
+
+                    return false;
                 }
             }
         }
@@ -1040,6 +1024,7 @@ HTML;
             self::showFormItemtype([
                 'rand'    => $rand,
                 'subtype' => $this->fields['subtype'],
+                'type'    => $this->fields['type'],
             ]);
             echo '</span>';
         }
@@ -1968,6 +1953,22 @@ HTML;
             $item->input['_plugin_fields_data'] = $data;
 
             return true;
+        }
+
+        //call validateValues() with a minimal data array to check for missing mandatory fields
+        //in case populateData() fails
+        if ($item->isNewItem() && $loc_c->fields['type'] === 'dom') {
+            $status_field_name = PluginFieldsStatusOverride::getStatusFieldName($item::getType());
+            $data = ['plugin_fields_containers_id' => $c_id];
+            if (array_key_exists($status_field_name, $item->input) && $item->input[$status_field_name] !== '') {
+                $data[$status_field_name] = (int) $item->input[$status_field_name];
+            } elseif (array_key_exists($status_field_name, $item->fields) && $item->fields[$status_field_name] !== '') {
+                $data[$status_field_name] = (int) $item->fields[$status_field_name];
+            }
+
+            if (self::validateValues($data, $item::getType(), isset($_REQUEST['massiveaction'])) === false) {
+                $item->input = [];
+            }
         }
 
         return false;
