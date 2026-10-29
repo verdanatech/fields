@@ -31,7 +31,7 @@
 /** @var array $CFG_GLPI */
 global $CFG_GLPI;
 
-define('PLUGIN_FIELDS_VERSION', '1.24.6');
+define('PLUGIN_FIELDS_VERSION', '1.24.7');
 
 // Minimal GLPI version, inclusive
 define('PLUGIN_FIELDS_MIN_GLPI', '11.0.2');
@@ -75,6 +75,7 @@ use Glpi\Form\Destination\FormDestinationManager;
 use Glpi\Form\Destination\FormDestinationProblem;
 use Glpi\Form\Destination\FormDestinationTicket;
 use Glpi\Form\Migration\TypesConversionMapper;
+use Glpi\Form\Question;
 use Glpi\Form\QuestionType\QuestionTypesManager;
 use Glpi\Plugin\Hooks;
 use Symfony\Component\Yaml\Yaml;
@@ -134,6 +135,7 @@ function plugin_init_fields()
 
     // Register fields question type
     plugin_fields_register_plugin_types();
+    $PLUGIN_HOOKS['pre_item_add']['fields'][Question::class] = PluginFieldsQuestionType::preQuestionAdd(...);
 
     if (Session::getLoginUserID() || isCommandLine()) {
         // Init hook about itemtype(s) for plugin fields
