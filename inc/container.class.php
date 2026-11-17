@@ -2029,7 +2029,7 @@ HTML;
      *
      * @return boolean
      */
-    public static function validateValues($data, $itemtype, $massiveaction, $is_creation = false)
+    public static function validateValues($data, $itemtype, $massiveaction, $is_creation = false,$item = null)
     {
         /** @var DBmysql $DB */
         global $DB;
@@ -2142,7 +2142,8 @@ HTML;
             }
         }
 
-        if ($empty_errors !== []) {
+        $display_condition = new PluginFieldsContainerDisplayCondition();
+        if ($empty_errors !== [] && $display_condition->computeDisplayContainer($item, $data['plugin_fields_containers_id'])) {
             Session::AddMessageAfterRedirect(__('Some mandatory fields are empty', 'fields')
                                           . ' : ' . implode(', ', $empty_errors), false, ERROR);
             if ($is_creation) {
@@ -2664,7 +2665,7 @@ HTML;
             }
         }
 
-        if (self::validateValues($data, $item::getType(), isset($_REQUEST['massiveaction']), $item->isNewItem()) === false) {
+        if (self::validateValues($data, $item::getType(), isset($_REQUEST['massiveaction']), $item->isNewItem() === false,$item)) {
             return false;
         }
 
