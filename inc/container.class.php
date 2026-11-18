@@ -2036,7 +2036,7 @@ HTML;
      *
      * @return boolean
      */
-    public static function validateValues($data, $itemtype, $massiveaction, $is_creation = false,$item = null)
+    public static function validateValues($data, $itemtype, $massiveaction, $is_creation = false)
     {
         /** @var DBmysql $DB */
         global $DB;
