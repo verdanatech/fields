@@ -1753,16 +1753,9 @@ HTML;
     {
         /** @var DBmysql $DB */
         global $DB;
-        $item = new $data['itemtype']();
-        $item->getFromDB($data['items_id']);
-        if (self::validateValues(
-            $data,
-            $item::getType(),
-            isset($_REQUEST['massiveaction']),
-            false,
-            $item
-        ) === false) {
-                        return false;
+
+        if (self::validateValues($data, $itemtype, $massiveaction) === false) {
+            return false;
         }
 
         //Get object classname
@@ -2148,12 +2141,7 @@ HTML;
                 }
             }
         }
-        $display_condition = new PluginFieldsContainerDisplayCondition();
-        if(!$display_condition->computeDisplayContainer($item, $data['plugin_fields_containers_id']))
-        {
-            $valid           = true;
-            $empty_errors = [];
-        }
+
         if ($empty_errors !== []) {
             Session::AddMessageAfterRedirect(__('Some mandatory fields are empty', 'fields')
                                           . ' : ' . implode(', ', $empty_errors), false, ERROR);
@@ -2180,7 +2168,6 @@ HTML;
             Session::AddMessageAfterRedirect(__('Some item fields reference an invalid item', 'fields')
                                           . ' : ' . implode(', ', $reference_errors), false, ERROR);
         }
-
 
         return $valid;
     }
@@ -2632,13 +2619,7 @@ HTML;
             // read-only fields keep their stored value, or their default on creation
             $data = self::removeReadonlyValues($data, $item);
 
-            if (self::validateValues(
-                $data,
-                $item::getType(),
-                isset($_REQUEST['massiveaction']),
-                false,
-                $item
-            ) === false) {
+            if (self::validateValues($data, $item::getType(), isset($_REQUEST['massiveaction'])) === false) {
                 return false;
             }
 
@@ -2683,14 +2664,8 @@ HTML;
             }
         }
 
-        if (self::validateValues(
-            $data,
-            $item::getType(),
-            isset($_REQUEST['massiveaction']),
-            false,
-            $item
-        ) === false) {
-                return false;
+        if (self::validateValues($data, $item::getType(), isset($_REQUEST['massiveaction']), $item->isNewItem()) === false) {
+            return false;
         }
 
         return [];
